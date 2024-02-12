@@ -327,3 +327,6 @@ build/*/content/*
 
 # Test reports
 *.trx
+
+# Custom
+dist
