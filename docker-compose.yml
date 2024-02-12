@@ -10,6 +10,7 @@ services:
     environment:
       - DOTNET_RUNNING_IN_CONTAINER=true
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:9042
       - Firefly__FrontChannelBaseAddress=http://localhost:8042
       - Firefly__BackChannelBaseAddress=http://localhost:8042
       - Firefly__RedirectUri=http://localhost:9042/signin-oidc
