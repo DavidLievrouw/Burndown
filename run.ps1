@@ -5,7 +5,7 @@ $InformationPreference = "Continue"
 
 docker-compose --file docker-compose.yml --project-name $Project down --rmi local --remove-orphans
 
-docker build --network host -m 1GB -t "$($Project):$($Tag)" -f dockerfile .
+docker build --no-cache --network host -m 1GB -t "$($Project):$($Tag)" -f dockerfile .
 if (0 -ne $LastExitCode) {
     throw "Docker build failed with exit code $LastExitCode."
 }
