@@ -33,6 +33,7 @@
             <label>Budget from previous month:</label>
             <RadzenNumeric
                 TValue="decimal"
+                Culture="@CultureInfo.GetCultureInfo("nl-BE")"
                 style="--rz-input-font-size: 1.5rem"
                 Format="c"
                 Value="@PreviousMonthBudget"

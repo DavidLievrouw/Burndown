@@ -10,7 +10,7 @@ public class FireflySettings {
         new($"{FrontChannelBaseAddress.AbsoluteUri.TrimEnd('/')}/oauth/authorize", UriKind.Absolute);
 
     public Uri TokenEndpoint =>
-        new($"{FrontChannelBaseAddress.AbsoluteUri.TrimEnd('/')}/oauth/token", UriKind.Absolute);
+        new($"{BackChannelBaseAddress.AbsoluteUri.TrimEnd('/')}/oauth/token", UriKind.Absolute);
 
     public required Uri RedirectUri { get; init; }
 }
