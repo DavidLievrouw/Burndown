@@ -14,7 +14,7 @@
             <div class="spinner"></div>
         </div>
     }
-    <div class="row">
+    <div class="row header">
         <div class="col-md-3" style="display: flex; flex-direction: row; align-items: center; gap: 10px;">
             <label style="min-width: 120px;">Select a month:</label>
             <RadzenButton Click="@(args => DecreaseMonth())" Text=" < " Disabled="@(SelectedMonth <= MinDate)" ButtonStyle="ButtonStyle.Light"/>
@@ -46,36 +46,50 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <RadzenGrid AllowSorting="true" Data="@Days" TItem="DayToRender" Density="Density.Compact">
+            <RadzenDataGrid
+                @ref="DataGrid"
+                Style="font-family: 'JetBrains Mono', 'Consolas', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+                AllowSorting="true"
+                Data="@Days"
+                TItem="DayToRender"
+                Density="Density.Compact"
+                GridLines="DataGridGridLines.Both"
+                SelectionMode="DataGridSelectionMode.Single"
+                RowSelect="@RowSelect"
+                CellRender="@CellRender">
                 <Columns>
-                    <RadzenGridColumn TItem="DayToRender" Property="Date" Title="Date" Sortable="true" Format="ddd d MMM yyyy" Width="200px"/>
-                    <RadzenGridColumn TItem="DayToRender" Property="Description" Title="Description" Sortable="true" Width="auto"/>
-                    <RadzenGridColumn TItem="DayToRender" Property="Amount" Title="Amount" Sortable="true" Width="200px">
+                    <RadzenDataGridColumn TItem="DayToRender" Property="Date" Title="Date" Sortable="true" Width="200px">
+                        <Template Context="day">
+                            @day.Date.ToString("ddd d MMM yyyy")
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="DayToRender" Property="Description" Title="Description" Sortable="true" Width="auto"/>
+                    <RadzenDataGridColumn TItem="DayToRender" Property="Amount" Title="Amount" Sortable="true" Width="200px">
                         <Template Context="day">
                             <div style="background: @day.AmountColor;">
                                 @string.Format(new CultureInfo("nl-BE"), "{0:C}", day.Amount)
                             </div>
                         </Template>
-                    </RadzenGridColumn>
-                    <RadzenGridColumn TItem="DayToRender" Property="RunningTotal" Title="Total" Sortable="false" Width="200px">
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="DayToRender" Property="RunningTotal" Title="Total" Sortable="false" Width="200px">
                         <Template Context="day">
                             @string.Format(new CultureInfo("nl-BE"), "{0:C}", day.RunningTotal)
                         </Template>
-                    </RadzenGridColumn>
-                    <RadzenGridColumn TItem="DayToRender" Property="Budget" Title="Budget" Sortable="false" Width="200px">
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="DayToRender" Property="Budget" Title="Budget" Sortable="false" Width="200px">
                         <Template Context="day">
                             @string.Format(new CultureInfo("nl-BE"), "{0:C}", day.Budget)
                         </Template>
-                    </RadzenGridColumn>
-                    <RadzenGridColumn TItem="DayToRender" Property="PerDay" Title="Per day" Sortable="false" Width="200px">
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="DayToRender" Property="PerDay" Title="Per day" Sortable="false" Width="200px">
                         <Template Context="day">
                             <div style="background: @day.PerDayColor;">
                                 @string.Format(new CultureInfo("nl-BE"), "{0:C}", day.PerDay)
                             </div>
                         </Template>
-                    </RadzenGridColumn>
+                    </RadzenDataGridColumn>
                 </Columns>
-            </RadzenGrid>
+            </RadzenDataGrid>
         </div>
     </div>
 </div>
@@ -92,6 +106,7 @@
     private IList<Expense> Expenses { get; set; } = new List<Expense>();
     private IList<DayToRender> Days { get; set; } = new List<DayToRender>();
     private decimal PreviousMonthBudget { get; set; }
+    private RadzenDataGrid<DayToRender> DataGrid { get; set; }
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
@@ -150,4 +165,14 @@
         await Reload();
     }
 
+    void RowSelect(DayToRender obj) {
+        // Do not allow selection
+        DataGrid.SelectRow(null!, raiseEvent: false);
+    }
+
+    static void CellRender(DataGridCellRenderEventArgs<DayToRender> obj) {
+        if (obj.Data.Date.DayOfWeek == DayOfWeek.Saturday || obj.Data.Date.DayOfWeek == DayOfWeek.Sunday) {
+            obj.Attributes["style"] = "background-color: #eaeaea;";
+        }
+    }
 }
