@@ -96,7 +96,7 @@ h1:focus {
     }
 }
 
-.rz-data-grid-data td .rz-cell-data {
+.rz-grid-table td .rz-cell-data {
     font-size: 16px !important;
 }
 
