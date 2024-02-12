@@ -106,7 +106,7 @@
     private IList<Expense> Expenses { get; set; } = new List<Expense>();
     private IList<DayToRender> Days { get; set; } = new List<DayToRender>();
     private decimal PreviousMonthBudget { get; set; }
-    private RadzenDataGrid<DayToRender> DataGrid { get; set; }
+    private RadzenDataGrid<DayToRender>? DataGrid { get; set; }
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
@@ -167,7 +167,7 @@
 
     void RowSelect(DayToRender obj) {
         // Do not allow selection
-        DataGrid.SelectRow(null!, raiseEvent: false);
+        DataGrid?.SelectRow(null!, raiseEvent: false);
     }
 
     static void CellRender(DataGridCellRenderEventArgs<DayToRender> obj) {
