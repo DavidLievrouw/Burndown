@@ -4,10 +4,13 @@ using Burndown.Models;
 namespace Burndown.Services;
 
 public class DataProcessor {
+    private const string Tag_MonthlyInstallment = "MonthlyInstallment";
+    private const string DestinationType_ExpenseAccount = "Expense account";
+
     public IList<DayToRender> GetGridData(DateTime selectedMonth, decimal incomeOfPreviousMonth, IEnumerable<Expense> expenses) {
         var groupedExpenses = expenses
-            .Where(e => !e.Tags.Contains("MonthlyInstallment")) // Exclude monthly installments
-            .Where(e => e.DestinationType != "Expense account") // Exclude payments to expense accounts
+            .Where(e => !e.Tags.Contains(Tag_MonthlyInstallment)) // Exclude monthly installments
+            .Where(e => e.DestinationType != DestinationType_ExpenseAccount) // Exclude payments to expense accounts
             .GroupBy(e => e.Date.Date)
             .Select(
                 g => new Expense {
