@@ -8,14 +8,16 @@ services:
     ports:
       - "9042:9042"
     networks:
-      - burndown
+      - burndownnw
     environment:
       - DOTNET_RUNNING_IN_CONTAINER=true
       - ASPNETCORE_ENVIRONMENT=Development
-      - Firefly__BaseAddress=http://localhost:8042
+      - Firefly__FrontChannelBaseAddress=http://localhost:8042
+      - Firefly__BackChannelBaseAddress=http://host-gateway:8042
       - Firefly__RedirectUri=http://localhost:9042/signin-oidc
       - Firefly__ClientId=151
       - Firefly__ClientSecret=i84Q3RTmC6DNjN7ReVo3BUP6ZErRqlaK0asX8EaK
 
 networks:
-  burndown:
+  burndownnw:    
+    driver: bridge
