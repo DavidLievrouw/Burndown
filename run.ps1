@@ -10,4 +10,4 @@ if (0 -ne $LastExitCode) {
     throw "Docker build failed with exit code $LastExitCode."
 }
 
-docker-compose --file docker-compose.yml --project-name $Project up #--detach
+docker-compose --file docker-compose.yml --project-name $Project up --detach

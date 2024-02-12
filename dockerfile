@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
 COPY ./src/Burndown/ ./
-RUN dotnet publish -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true /p:PublishReadyToRun=true -o out
+RUN dotnet publish -c Debug -r linux-x64 --self-contained true /p:PublishSingleFile=true /p:EnableCompressionInSingleFile=true /p:PublishReadyToRun=true  -o out
 
 FROM mcr.microsoft.com/dotnet/runtime-deps:8.0-jammy-chiseled-extra
 
