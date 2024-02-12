@@ -15,7 +15,7 @@ docker-compose --file docker-compose.yml --project-name $Product.ToLower() down 
 
 dotnet publish "$SrcDir/$Product/$Product.csproj" --configuration Release --force --output "$DistDir/Container" --self-contained true --runtime linux-x64 -p:EnvironmentName=Production
 
-docker build --network host -m 1GB -t "$($Product.ToLower()):$($Tag)" -f dockerfile .
+docker build --no-cache --network host -m 1GB -t "$($Product.ToLower()):$($Tag)" -f dockerfile .
 
 if (0 -ne $LastExitCode) {
     throw "Docker build failed with exit code $LastExitCode."
