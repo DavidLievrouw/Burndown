@@ -96,10 +96,14 @@ h1:focus {
     }
 }
 
+.header {
+    margin-bottom: 10px;
+}
+
 .rz-grid-table td .rz-cell-data {
     font-size: 16px !important;
 }
 
-.header {
-    margin-bottom: 10px;
+.rz-grid-table td {
+    padding: 0.3rem !important;
 }
