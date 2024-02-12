@@ -95,3 +95,7 @@ h1:focus {
         transform: rotate(720deg);
     }
 }
+
+.rz-datatable-scrollable-body td {
+    padding: 8px !important;
+}

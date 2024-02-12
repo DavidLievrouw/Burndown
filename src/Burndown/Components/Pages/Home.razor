@@ -46,7 +46,7 @@
     </div>
     <div class="row">
         <div class="col-md-12">
-            <RadzenGrid AllowSorting="true" Data="@Days" TItem="DayToRender">
+            <RadzenGrid AllowSorting="true" Data="@Days" TItem="DayToRender" Density="Density.Compact">
                 <Columns>
                     <RadzenGridColumn TItem="DayToRender" Property="Date" Title="Date" Sortable="true" Format="ddd d MMM yyyy" Width="200px"/>
                     <RadzenGridColumn TItem="DayToRender" Property="Description" Title="Description" Sortable="true" Width="auto"/>
