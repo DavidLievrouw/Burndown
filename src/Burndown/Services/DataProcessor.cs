@@ -7,17 +7,24 @@ public class DataProcessor {
     private const string Tag_MonthlyInstallment = "MonthlyInstallment";
     private const string DestinationType_ExpenseAccount = "Expense account";
 
-    public IList<DayToRender> GetGridData(DateTime selectedMonth, decimal incomeOfPreviousMonth, IEnumerable<Expense> expenses) {
+    public static IList<DayToRender> GetGridData(DateTime selectedMonth, decimal incomeOfPreviousMonth, IEnumerable<Expense> expenses) {
         var groupedExpenses = expenses
             .Where(e => !e.Tags.Contains(Tag_MonthlyInstallment)) // Exclude monthly installments
             .Where(e => e.DestinationType != DestinationType_ExpenseAccount) // Exclude payments to expense accounts
             .GroupBy(e => e.Date.Date)
             .Select(
-                g => new Expense {
-                    Date = g.Key,
-                    Description = string.Join(", ", g.Where(e => !string.IsNullOrEmpty(e.Description)).Select(e => e.Description)),
-                    Amount = g.Sum(e => e.Amount),
-                    Tags = g.SelectMany(e => e.Tags).Distinct().ToArray()
+                g => {
+                    var orderedDistinctDescriptions = g
+                        .Where(e => !string.IsNullOrEmpty(e.Description))
+                        .Select(e => e.Description)
+                        .DistinctBy(d => d, StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(d => d?.ToLower() ?? string.Empty);
+                    return new Expense {
+                        Date = g.Key,
+                        Description = string.Join(", ", orderedDistinctDescriptions),
+                        Amount = g.Sum(e => e.Amount),
+                        Tags = g.SelectMany(e => e.Tags).Distinct().ToArray()
+                    };
                 }
             )
             .OrderBy(e => e.Date)
