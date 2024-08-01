@@ -1,8 +1,0 @@
-- List accounts
-- Validation rules
-  - Different accounts
-  - Amount greater than zero
-  - Date not greater than today
-- Submit expense
-  - When 'Shared', check source account
-  - Add one minute on every add of an expense on the same day
