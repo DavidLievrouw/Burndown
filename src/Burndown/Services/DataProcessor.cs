@@ -96,6 +96,8 @@ public class DataProcessor {
             ? days.Max(d => d.Amount)
             : 1;
 
+        range = Math.Max(1, Math.Abs(range));
+
         var redness = Math.Min(1, Math.Abs(dayToRender.Amount) / range) / 2;
         return $"rgba(255, 0, 0, {redness.ToString("0.00", CultureInfo.InvariantCulture)})";
     }
