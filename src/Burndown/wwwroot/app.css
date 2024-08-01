@@ -135,3 +135,7 @@ a.nav-link {
     color: red;
     margin-top: 15px;
 }
+
+h5.label {
+    margin-bottom: 0;
+}

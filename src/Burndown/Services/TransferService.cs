@@ -41,5 +41,9 @@ public class TransferService {
         if (!response.IsSuccessStatusCode) {
             throw new HttpRequestException("Failed to add quick expense to Firefly. " + response.ReasonPhrase);
         }
+        
+        if (response.Content.Headers.ContentType?.MediaType == "text/html") {
+            throw new HttpRequestException("Unexpected content type: text/html.");
+        }
     }
 }

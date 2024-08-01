@@ -30,7 +30,7 @@ public class AuthorizationService {
         if (string.IsNullOrEmpty(expirationString)) {
             return null;
         }
-        var expirationTime = DateTime.ParseExact(expirationString, "u", CultureInfo.InvariantCulture);
+        var expirationTime = DateTime.SpecifyKind(DateTime.ParseExact(expirationString, "u", CultureInfo.InvariantCulture), DateTimeKind.Utc);
         
         if (DateTime.UtcNow > expirationTime) {
             // Access token expired

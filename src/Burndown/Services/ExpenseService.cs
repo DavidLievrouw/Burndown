@@ -15,7 +15,7 @@ public class ExpenseService {
 
     public async Task AddQuickExpense(QuickExpense expense) {
         var accessToken = _authorizationService.GetAccessToken();
-
+        
         var json = $@"
         {{
             ""apply_rules"": true,
@@ -31,7 +31,8 @@ public class ExpenseService {
                     ""category_name"": ""{expense.Category}"",
                     ""tags"": [
                         ""{expense.Target}""
-                    ]
+                    ],
+                    ""budget_id"": ""{expense.Budget ?? string.Empty}"",
                 }}
             ]
         }}";
@@ -44,6 +45,10 @@ public class ExpenseService {
 
         if (!response.IsSuccessStatusCode) {
             throw new HttpRequestException("Failed to add quick expense to Firefly. " + response.ReasonPhrase);
+        }
+        
+        if (response.Content.Headers.ContentType?.MediaType == "text/html") {
+            throw new HttpRequestException("Unexpected content type: text/html.");
         }
     }
 }
