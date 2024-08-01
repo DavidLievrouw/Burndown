@@ -25,7 +25,7 @@
                       @bind-Value="_selectedDate"
                       DateFormat="yyyy-MM-dd"
                       Min="DateTime.Today.AddMonths(-2)"
-                      Max="DateTime.Today"/>
+                      Max="DateTime.Today.AddDays(1)"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
@@ -50,6 +50,7 @@
     
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
+        _submittedExpense = null;
         _accounts = (await FireflyQueryService.GetAccounts())
             .OrderBy(a => a.Name)
             .ToList();

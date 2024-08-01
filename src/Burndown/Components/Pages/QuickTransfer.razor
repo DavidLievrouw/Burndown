@@ -3,6 +3,7 @@
 @using Burndown.Services
 
 @inject FireflyQueryService FireflyQueryService
+@inject TransferService TransferService
 
 <PageTitle>Quick transfer</PageTitle>
 
@@ -35,7 +36,7 @@
                       @bind-Value="_selectedDate"
                       DateFormat="yyyy-MM-dd"
                       Min="DateTime.Today.AddMonths(-2)"
-                      Max="DateTime.Today"/>
+                      Max="DateTime.Today.AddDays(1)"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
@@ -55,12 +56,13 @@
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
+        _submittedTransfer = null;
         _accounts = (await FireflyQueryService.GetAccounts())
             .OrderBy(a => a.Name)
             .ToList();
     }
 
-    private void OnSubmit() {
+    private async Task OnSubmit() {
         _submittedTransfer = new Models.QuickTransfer {
             FromAccount = _selectedFromAccount!,
             ToAccount = _selectedToAccount!,
@@ -68,6 +70,7 @@
             Description = _description!,
             Amount = _amount
         };
+        await TransferService.AddQuickTransfer(_submittedTransfer);
         _description = string.Empty;
         _amount = 0;
     }
