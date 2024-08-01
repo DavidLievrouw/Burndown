@@ -3,13 +3,24 @@
 @using Burndown.Services
 
 @inject FireflyQueryService FireflyQueryService
+@inject ExpenseService ExpenseService
 
 <PageTitle>Quick expense</PageTitle>
 
 <h1 class="page-title">Quick expense</h1>
 
 <div class="form-container">
-    <RadzenAutoComplete @bind-Value="_selectedSourceAccount" Data="_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="Select Source Account" class="input-control" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+    <RadzenDropDown @bind-Value="_selectedSourceAccount"
+                    class="input-control"
+                    FilterDelay="100" 
+                    Data="_accounts" 
+                    TextProperty="@nameof(Account.Name)" 
+                    ValueProperty="@nameof(Account.Id)" 
+                    Placeholder="Select Source Account" 
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterOperator="StringFilterOperator.Contains" 
+                    AllowFiltering="true"
+                    AllowClear="true" />
     <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" class="input-control"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
@@ -30,15 +41,17 @@
     private string? _selectedCategory;
     private readonly List<string> _categories = ["Leven", "Nodig", "Optioneel", "Folietjes"];
     private string? _selectedTarget;
-    private readonly List<string> _targets = ["Shared", "Tina", "David", "Settled"];
+    private readonly List<string> _targets = ["SharedDavid", "SharedTina", "Tina", "David", "Settled"];
     private Models.QuickExpense? _submittedExpense;
     
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
-        _accounts = (await FireflyQueryService.GetAccounts()).ToList();
+        _accounts = (await FireflyQueryService.GetAccounts())
+            .OrderBy(a => a.Name)
+            .ToList();
     }
 
-    private void OnSubmit() {
+    private async Task OnSubmit() {
         _submittedExpense = new Models.QuickExpense {
             Account = _selectedSourceAccount!,
             Date = _selectedDate,
@@ -47,6 +60,7 @@
             Category = _selectedCategory!,
             Target = _selectedTarget!
         };
+        await ExpenseService.AddQuickExpense(_submittedExpense);
         _description = string.Empty;
         _amount = 0;
     }

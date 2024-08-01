@@ -9,8 +9,28 @@
 <h1 class="page-title">Quick transfer</h1>
 
 <div class="form-container">
-    <RadzenAutoComplete @bind-Value="_selectedFromAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="From Account" class="input-control" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
-    <RadzenAutoComplete @bind-Value="_selectedToAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="To Account" class="input-control" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+    <RadzenDropDown @bind-Value="_selectedFromAccount"
+                    class="input-control"
+                    FilterDelay="100"
+                    Data="_accounts"
+                    TextProperty="@nameof(Account.Name)"
+                    ValueProperty="@nameof(Account.Id)"
+                    Placeholder="From Account"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterOperator="StringFilterOperator.Contains"
+                    AllowFiltering="true"
+                    AllowClear="true" />
+    <RadzenDropDown @bind-Value="_selectedToAccount"
+                    class="input-control"
+                    FilterDelay="100"
+                    Data="_accounts"
+                    TextProperty="@nameof(Account.Name)"
+                    ValueProperty="@nameof(Account.Id)"
+                    Placeholder="To Account"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterOperator="StringFilterOperator.Contains"
+                    AllowFiltering="true"
+                    AllowClear="true" />
     <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" class="input-control"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
@@ -31,7 +51,9 @@
     
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
-        _accounts = (await FireflyQueryService.GetAccounts()).ToList();
+        _accounts = (await FireflyQueryService.GetAccounts())
+            .OrderBy(a => a.Name)
+            .ToList();
     }
 
     private void OnSubmit() {

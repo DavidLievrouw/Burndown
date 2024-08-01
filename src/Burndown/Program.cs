@@ -23,6 +23,13 @@ builder.Services
             client.BaseAddress = fireflySettings.Value.BackChannelBaseAddress;
         }
     ).Services
+    .AddSingleton<ExpenseService>()
+    .AddHttpClient<ExpenseService>(
+        (provider, client) => {
+            var fireflySettings = provider.GetRequiredService<IOptions<FireflySettings>>();
+            client.BaseAddress = fireflySettings.Value.BackChannelBaseAddress;
+        }
+    ).Services
     .AddSingleton<DataProcessor>()
     .AddRazorComponents()
     .AddInteractiveServerComponents().Services
