@@ -26,7 +26,14 @@
                       DateFormat="yyyy-MM-dd HH:mm"
                       Min="DateTime.Today.AddMonths(-2)"
                       Max="DateTime.Today.AddDays(1)"/>
-    <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
+    <RadzenAutoComplete class="input-control"
+                        @bind-Value="_description"
+                        Data="_transactionNames"
+                        LoadData="LoadTransactionNames"
+                        FilterDelay="100"
+                        TextProperty="Name"
+                        Placeholder="Description"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
     <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets" Orientation="Orientation.Vertical"/>
@@ -51,6 +58,7 @@
     private readonly List<string> _targets = ["SharedDavid", "SharedTina", "Tina", "David", "Settled"];
     private Models.QuickExpense? _submittedExpense;
     private string? _error;
+    private List<string> _transactionNames = new();
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
@@ -72,13 +80,18 @@
         try {
             await ExpenseService.AddQuickExpense(_submittedExpense);
             _error = null;
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             _submittedExpense = null;
             _error = e.Message;
             return;
         }
         _description = string.Empty;
         _amount = 0;
+    }
+
+    private async Task LoadTransactionNames(LoadDataArgs args) {
+        _transactionNames = (await FireflyQueryService.GetTransactionNames(args.Filter)).ToList();
     }
 
     private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedSourceAccount) ||

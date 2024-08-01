@@ -37,7 +37,14 @@
                       DateFormat="yyyy-MM-dd HH:mm"
                       Min="DateTime.Today.AddMonths(-2)"
                       Max="DateTime.Today.AddDays(1)"/>
-    <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
+    <RadzenAutoComplete class="input-control"
+                        @bind-Value="_description"
+                        Data="_transactionNames"
+                        LoadData="LoadTransactionNames"
+                        FilterDelay="100"
+                        TextProperty="Name"
+                        Placeholder="Description"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
     @if (_submittedTransfer != null) {
@@ -57,6 +64,7 @@
     private decimal _amount;
     private Models.QuickTransfer? _submittedTransfer;
     private string? _error;
+    private List<string> _transactionNames = new();
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
@@ -85,6 +93,11 @@
         }
         _description = string.Empty;
         _amount = 0;
+    }
+
+
+    private async Task LoadTransactionNames(LoadDataArgs args) {
+        _transactionNames = (await FireflyQueryService.GetTransactionNames(args.Filter)).ToList();
     }
 
     private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedFromAccount) ||
