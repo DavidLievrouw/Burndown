@@ -7,5 +7,5 @@ public class QuickExpense {
     public required decimal Amount { get; set; }
     public required string Category { get; set; }
     public required string Target { get; set; }
-    public string? Budget { get; set; }
+    public int? Budget { get; set; }
 }

@@ -33,7 +33,7 @@ public class ExpenseService {
                     ""tags"": [
                         ""{expense.Target}""
                     ],
-                    ""budget_id"": ""{expense.Budget ?? string.Empty}"",
+                    ""budget_id"": {expense.Budget?.ToString(CultureInfo.InvariantCulture) ?? "null"}
                 }}
             ]
         }}";
