@@ -1,0 +1,49 @@
+﻿@page "/qt"
+
+<PageTitle>Quick transfer</PageTitle>
+
+<h1 class="page-title">Quick Transfer</h1>
+
+<div class="form-container">
+    <RadzenDropDown @bind-Value="_selectedFromAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="From Account" Style="width: 500px;"/>
+    <RadzenDropDown @bind-Value="_selectedToAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="To Account" Style="width: 500px;"/>
+    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" Style="width: 500px;"/>
+    <RadzenTextBox @bind-Value="_description" Placeholder="Description" Style="width: 500px;"/>
+    <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" Style="width: 500px;"/>
+    <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" Style="width: 500px;"/>
+    @if (_showSuccessMessage) {
+        <div class="success-message">Transfer submitted successfully!</div>
+    }
+</div>
+
+@code {
+    private List<Account> _accounts = new();
+    private int _selectedFromAccount;
+    private int _selectedToAccount;
+    private DateTime _selectedDate = DateTime.Now;
+    private string? _description;
+    private decimal _amount;
+    private bool _showSuccessMessage;
+
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+        _accounts = new List<Account> {
+            new Account { Id = 1, Name = "Account 1" },
+            new Account { Id = 2, Name = "Account 2" },
+            new Account { Id = 3, Name = "Account 3" }
+        };
+    }
+
+    private void OnSubmit() {
+        _showSuccessMessage = true;
+        _description = string.Empty;
+        _amount = 0;
+    }
+
+    private bool IsSubmitDisabled => _selectedFromAccount == 0 || _selectedToAccount == 0 || string.IsNullOrEmpty(_description) || _amount <= 0;
+
+    public class Account {
+        public int Id { get; set; }
+        public required string Name { get; set; }
+    }
+}
