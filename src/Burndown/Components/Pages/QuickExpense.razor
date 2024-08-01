@@ -4,26 +4,26 @@
 
 @inject FireflyQueryService FireflyQueryService
 
-<PageTitle>Burndown</PageTitle>
+<PageTitle>Quick expense</PageTitle>
 
 <h1 class="page-title">Quick expense</h1>
 
 <div class="form-container">
-    <RadzenDropDown @bind-Value="_selectedSourceAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="Select Source Account" Style="width: 500px;"/>
-    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" Style="width: 500px;"/>
-    <RadzenTextBox @bind-Value="_description" Placeholder="Description" Style="width: 500px;"/>
-    <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" Style="width: 500px;"/>
-    <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" Style="width: 500px;"/>
+    <RadzenAutoComplete @bind-Value="_selectedSourceAccount" Data="_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="Select Source Account" class="input-control" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" class="input-control"/>
+    <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
+    <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
+    <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
     <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets"/>
-    <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" Style="width: 500px;"/>
-    @if (_showSuccessMessage) {
-        <div class="success-message">Form submitted successfully!</div>
+    <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
+    @if (_submittedExpense != null) {
+        <div class="success-message">Expense '@_submittedExpense.Description' submitted successfully!</div>
     }
 </div>
 
 @code {
     private List<Account> _accounts = new();
-    private int _selectedSourceAccount;
+    private string? _selectedSourceAccount;
     private DateTime _selectedDate = DateTime.Now;
     private string? _description;
     private decimal _amount;
@@ -31,18 +31,29 @@
     private readonly List<string> _categories = ["Leven", "Nodig", "Optioneel", "Folietjes"];
     private string? _selectedTarget;
     private readonly List<string> _targets = ["Shared", "Tina", "David", "Settled"];
-    private bool _showSuccessMessage;
-
+    private Models.QuickExpense? _submittedExpense;
+    
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
         _accounts = (await FireflyQueryService.GetAccounts()).ToList();
     }
 
     private void OnSubmit() {
-        _showSuccessMessage = true;
+        _submittedExpense = new Models.QuickExpense {
+            Account = _selectedSourceAccount!,
+            Date = _selectedDate,
+            Description = _description!,
+            Amount = _amount,
+            Category = _selectedCategory!,
+            Target = _selectedTarget!
+        };
         _description = string.Empty;
         _amount = 0;
     }
 
-    private bool IsSubmitDisabled => _selectedSourceAccount == 0 || string.IsNullOrEmpty(_description) || _amount <= 0 || string.IsNullOrEmpty(_selectedCategory) || string.IsNullOrEmpty(_selectedTarget);
+    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedSourceAccount) || 
+                                     string.IsNullOrEmpty(_description) || 
+                                     _amount <= 0 || 
+                                     string.IsNullOrEmpty(_selectedCategory) || 
+                                     string.IsNullOrEmpty(_selectedTarget);
 }

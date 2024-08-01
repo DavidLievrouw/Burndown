@@ -32,7 +32,7 @@ internal class FireflyQueryService {
                 .Where(a => a.GetProperty("attributes").GetProperty("type").GetString() == "asset")
                 .Select(
                     a => new Account {
-                        Id = a.GetProperty("id").GetString(),
+                        Id = a.GetProperty("id").GetString() ?? string.Empty,
                         Name = a.GetProperty("attributes").GetProperty("name").GetString() ?? string.Empty
                     }
                 )

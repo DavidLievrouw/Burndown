@@ -122,6 +122,10 @@ a.nav-link {
     gap: 15px;
 }
 
+.input-control {
+    width: 500px;
+}
+
 .success-message {
     color: green;
     margin-top: 15px;

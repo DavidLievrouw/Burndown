@@ -6,39 +6,48 @@
 
 <PageTitle>Quick transfer</PageTitle>
 
-<h1 class="page-title">Quick Transfer</h1>
+<h1 class="page-title">Quick transfer</h1>
 
 <div class="form-container">
-    <RadzenDropDown @bind-Value="_selectedFromAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="From Account" Style="width: 500px;"/>
-    <RadzenDropDown @bind-Value="_selectedToAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="To Account" Style="width: 500px;"/>
-    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" Style="width: 500px;"/>
-    <RadzenTextBox @bind-Value="_description" Placeholder="Description" Style="width: 500px;"/>
-    <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" Style="width: 500px;"/>
-    <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" Style="width: 500px;"/>
-    @if (_showSuccessMessage) {
-        <div class="success-message">Transfer submitted successfully!</div>
+    <RadzenAutoComplete @bind-Value="_selectedFromAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="From Account" class="input-control" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+    <RadzenAutoComplete @bind-Value="_selectedToAccount" Data="@_accounts" TextProperty="Name" ValueProperty="Id" Placeholder="To Account" class="input-control" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive" />
+    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" class="input-control"/>
+    <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
+    <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
+    <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
+    @if (_submittedTransfer != null) {
+        <div class="success-message">Transfer '@_submittedTransfer.Description' submitted successfully!</div>
     }
 </div>
 
 @code {
     private List<Account> _accounts = new();
-    private int _selectedFromAccount;
-    private int _selectedToAccount;
+    private string? _selectedFromAccount;
+    private string? _selectedToAccount;
     private DateTime _selectedDate = DateTime.Now;
     private string? _description;
     private decimal _amount;
-    private bool _showSuccessMessage;
-
+    private Models.QuickTransfer? _submittedTransfer;
+    
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
         _accounts = (await FireflyQueryService.GetAccounts()).ToList();
     }
 
     private void OnSubmit() {
-        _showSuccessMessage = true;
+        _submittedTransfer = new Models.QuickTransfer {
+            FromAccount = _selectedFromAccount!,
+            ToAccount = _selectedToAccount!,
+            Date = _selectedDate,
+            Description = _description!,
+            Amount = _amount
+        };
         _description = string.Empty;
         _amount = 0;
     }
 
-    private bool IsSubmitDisabled => _selectedFromAccount == 0 || _selectedToAccount == 0 || string.IsNullOrEmpty(_description) || _amount <= 0;
+    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedFromAccount) || 
+                                     string.IsNullOrEmpty(_selectedToAccount) || 
+                                     string.IsNullOrEmpty(_description) || 
+                                     _amount <= 0;
 }
