@@ -130,3 +130,8 @@ a.nav-link {
     color: green;
     margin-top: 15px;
 }
+
+.error-message {
+    color: red;
+    margin-top: 15px;
+}

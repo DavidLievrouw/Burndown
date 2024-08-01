@@ -43,6 +43,9 @@
     @if (_submittedTransfer != null) {
         <div class="success-message">Transfer '@_submittedTransfer.Description' submitted successfully!</div>
     }
+    @if (_error != null) {
+        <div class="error-message">An error occurred: @_error</div>
+    }
 </div>
 
 @code {
@@ -53,6 +56,7 @@
     private string? _description;
     private decimal _amount;
     private Models.QuickTransfer? _submittedTransfer;
+    private string? _error;
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
@@ -70,7 +74,15 @@
             Description = _description!,
             Amount = _amount
         };
-        await TransferService.AddQuickTransfer(_submittedTransfer);
+        try {
+            await TransferService.AddQuickTransfer(_submittedTransfer);
+            _error = null;
+        }
+        catch (Exception e) {
+            _submittedTransfer = null;
+            _error = e.Message;
+            return;
+        }
         _description = string.Empty;
         _amount = 0;
     }

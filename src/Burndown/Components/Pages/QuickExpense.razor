@@ -12,15 +12,15 @@
 <div class="form-container">
     <RadzenDropDown @bind-Value="_selectedSourceAccount"
                     class="input-control"
-                    FilterDelay="100" 
-                    Data="_accounts" 
-                    TextProperty="@nameof(Account.Name)" 
-                    ValueProperty="@nameof(Account.Id)" 
-                    Placeholder="Select Source Account" 
+                    FilterDelay="100"
+                    Data="_accounts"
+                    TextProperty="@nameof(Account.Name)"
+                    ValueProperty="@nameof(Account.Id)"
+                    Placeholder="Select Source Account"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                    FilterOperator="StringFilterOperator.Contains" 
+                    FilterOperator="StringFilterOperator.Contains"
                     AllowFiltering="true"
-                    AllowClear="true" />
+                    AllowClear="true"/>
     <RadzenDatePicker class="input-control"
                       @bind-Value="_selectedDate"
                       DateFormat="yyyy-MM-dd HH:mm"
@@ -29,10 +29,13 @@
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
-    <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets" Orientation="Orientation.Vertical" />
+    <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets" Orientation="Orientation.Vertical"/>
     <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
     @if (_submittedExpense != null) {
         <div class="success-message">Expense '@_submittedExpense.Description' submitted successfully!</div>
+    }
+    @if (_error != null) {
+        <div class="error-message">An error occurred: @_error</div>
     }
 </div>
 
@@ -47,7 +50,8 @@
     private string? _selectedTarget;
     private readonly List<string> _targets = ["SharedDavid", "SharedTina", "Tina", "David", "Settled"];
     private Models.QuickExpense? _submittedExpense;
-    
+    private string? _error;
+
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
         _submittedExpense = null;
@@ -65,14 +69,22 @@
             Category = _selectedCategory!,
             Target = _selectedTarget!
         };
-        await ExpenseService.AddQuickExpense(_submittedExpense);
+        try {
+            await ExpenseService.AddQuickExpense(_submittedExpense);
+            _error = null;
+        } catch (Exception e) {
+            _submittedExpense = null;
+            _error = e.Message;
+            return;
+        }
         _description = string.Empty;
         _amount = 0;
     }
 
-    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedSourceAccount) || 
-                                     string.IsNullOrEmpty(_description) || 
-                                     _amount <= 0 || 
-                                     string.IsNullOrEmpty(_selectedCategory) || 
+    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedSourceAccount) ||
+                                     string.IsNullOrEmpty(_description) ||
+                                     _amount <= 0 ||
+                                     string.IsNullOrEmpty(_selectedCategory) ||
                                      string.IsNullOrEmpty(_selectedTarget);
+
 }
