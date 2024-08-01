@@ -4,7 +4,6 @@
 @using System.Globalization
 
 @inject FireflyQueryService FireflyQueryService
-@inject DataProcessor DataProcessor
 @inject AuthorizationService AuthorizationService
 @inject NavigationManager NavigationManager
 
@@ -16,8 +15,8 @@
             <div class="spinner"></div>
         </div>
     }
-    <div class="row header">
-        <div class="col-md-3" style="display: flex; flex-direction: row; align-items: center; gap: 10px;">
+    <div class="row header gx-0">
+        <div class="col-md-3" style="display: flex; flex-direction: row; align-items: center;">
             <label style="min-width: 120px;">Select a month:</label>
             <RadzenButton Click="@(args => DecreaseMonth())" Text=" < " Disabled="@(SelectedMonth <= MinDate)" ButtonStyle="ButtonStyle.Light"/>
             <RadzenDatePicker
@@ -43,10 +42,10 @@
                 max="@(15000m)"
                 ValueChanged="OnBudgetChanged"/>
             <label>Total income:</label>
-            <h4>@(IncomeOfPreviousMonth.ToString("C", new CultureInfo("nl-BE")))</h4>
+            <h4 style="margin-bottom: 0;">@(IncomeOfPreviousMonth.ToString("C", new CultureInfo("nl-BE")))</h4>
         </div>
     </div>
-    <div class="row">
+    <div class="row gx-0">
         <div class="col-md-12">
             <RadzenDataGrid
                 @ref="DataGrid"

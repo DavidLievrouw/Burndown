@@ -107,3 +107,11 @@ h1:focus {
 .rz-grid-table td {
     padding: 0.3rem !important;
 }
+
+a.nav-link {
+    width: auto !important;
+}
+
+.nav-scrollable {
+    height: auto !important;
+}
