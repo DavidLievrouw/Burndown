@@ -23,7 +23,7 @@
                     AllowClear="true" />
     <RadzenDatePicker class="input-control"
                       @bind-Value="_selectedDate"
-                      DateFormat="yyyy-MM-dd"
+                      DateFormat="yyyy-MM-dd HH:mm"
                       Min="DateTime.Today.AddMonths(-2)"
                       Max="DateTime.Today.AddDays(1)"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
