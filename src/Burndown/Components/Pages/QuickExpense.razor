@@ -1,4 +1,8 @@
 ﻿@page "/qe"
+@using Burndown.Models
+@using Burndown.Services
+
+@inject FireflyQueryService FireflyQueryService
 
 <PageTitle>Burndown</PageTitle>
 
@@ -31,11 +35,7 @@
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
-        _accounts = [
-            new Account { Id = 1, Name = "Account 1" },
-            new Account { Id = 2, Name = "Account 2" },
-            new Account { Id = 3, Name = "Account 3" }
-        ];
+        _accounts = (await FireflyQueryService.GetAccounts()).ToList();
     }
 
     private void OnSubmit() {
@@ -45,10 +45,4 @@
     }
 
     private bool IsSubmitDisabled => _selectedSourceAccount == 0 || string.IsNullOrEmpty(_description) || _amount <= 0 || string.IsNullOrEmpty(_selectedCategory) || string.IsNullOrEmpty(_selectedTarget);
-
-    public class Account {
-        public int Id { get; set; }
-        public required string Name { get; set; }
-    }
-
 }

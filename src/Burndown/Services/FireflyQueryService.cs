@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Burndown.Components.Pages;
 using Burndown.Models;
 
 namespace Burndown.Services;
@@ -12,6 +13,33 @@ internal class FireflyQueryService {
     public FireflyQueryService(AuthorizationService authorizationService, HttpClient httpClient) {
         _authorizationService = authorizationService ?? throw new ArgumentNullException(nameof(authorizationService));
         _httpClient = httpClient;
+    }
+
+    public async Task<IEnumerable<Account>> GetAccounts() {
+        var accessToken = GetAccessToken();
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "api/v1/accounts");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode) {
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            var accounts = doc.RootElement.GetProperty("data").EnumerateArray().ToList();
+
+            return accounts
+                .Where(a => a.GetProperty("attributes").GetProperty("type").GetString() == "asset")
+                .Select(
+                    a => new Account {
+                        Id = a.GetProperty("id").GetString(),
+                        Name = a.GetProperty("attributes").GetProperty("name").GetString() ?? string.Empty
+                    }
+                )
+                .ToList();
+        }
+
+        throw new HttpRequestException("Failed to get accounts from Firefly. " + response.ReasonPhrase);
     }
 
     public async Task<decimal> GetIncomeOfPreviousMonth(DateTime selectedMonth) {

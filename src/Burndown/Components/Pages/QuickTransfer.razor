@@ -1,4 +1,8 @@
 ﻿@page "/qt"
+@using Burndown.Models
+@using Burndown.Services
+
+@inject FireflyQueryService FireflyQueryService
 
 <PageTitle>Quick transfer</PageTitle>
 
@@ -27,11 +31,7 @@
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
-        _accounts = new List<Account> {
-            new Account { Id = 1, Name = "Account 1" },
-            new Account { Id = 2, Name = "Account 2" },
-            new Account { Id = 3, Name = "Account 3" }
-        };
+        _accounts = (await FireflyQueryService.GetAccounts()).ToList();
     }
 
     private void OnSubmit() {
@@ -41,9 +41,4 @@
     }
 
     private bool IsSubmitDisabled => _selectedFromAccount == 0 || _selectedToAccount == 0 || string.IsNullOrEmpty(_description) || _amount <= 0;
-
-    public class Account {
-        public int Id { get; set; }
-        public required string Name { get; set; }
-    }
 }
