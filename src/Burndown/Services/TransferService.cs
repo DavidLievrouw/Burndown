@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Globalization;
+using System.Net.Http.Headers;
 using System.Text;
 using Burndown.Models;
 
@@ -24,7 +25,7 @@ public class TransferService {
             {{
               ""type"":""transfer"",
               ""date"":""{transfer.Date:yyyy-MM-ddTHH:mm}"",
-              ""amount"":""{transfer.Amount}"",
+              ""amount"":""{transfer.Amount.ToString(CultureInfo.InvariantCulture)}"",
               ""description"":""{transfer.Description}"",
               ""source_id"":""{transfer.FromAccount}"",
               ""destination_id"":""{transfer.ToAccount}""

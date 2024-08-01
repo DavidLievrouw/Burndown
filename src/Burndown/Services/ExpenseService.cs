@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Globalization;
+using System.Net.Http.Headers;
 using System.Text;
 using Burndown.Models;
 
@@ -24,7 +25,7 @@ public class ExpenseService {
                 {{
                     ""type"": ""withdrawal"",
                     ""date"": ""{expense.Date:yyyy-MM-ddTHH:mm}"",
-                    ""amount"": ""{expense.Amount}"",
+                    ""amount"": ""{expense.Amount.ToString(CultureInfo.InvariantCulture)}"",
                     ""description"": ""{expense.Description}"",
                     ""source_id"": ""{expense.Account}"",
                     ""destination_id"": ""16"",
