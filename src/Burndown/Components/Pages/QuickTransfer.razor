@@ -19,7 +19,7 @@
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     FilterOperator="StringFilterOperator.Contains"
                     AllowFiltering="true"
-                    AllowClear="true" />
+                    AllowClear="true"/>
     <RadzenDropDown @bind-Value="_selectedToAccount"
                     class="input-control"
                     FilterDelay="100"
@@ -30,8 +30,12 @@
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     FilterOperator="StringFilterOperator.Contains"
                     AllowFiltering="true"
-                    AllowClear="true" />
-    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" class="input-control"/>
+                    AllowClear="true"/>
+    <RadzenDatePicker class="input-control"
+                      @bind-Value="_selectedDate"
+                      DateFormat="yyyy-MM-dd"
+                      Min="DateTime.Today.AddMonths(-2)"
+                      Max="DateTime.Today"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
@@ -48,7 +52,7 @@
     private string? _description;
     private decimal _amount;
     private Models.QuickTransfer? _submittedTransfer;
-    
+
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
         _accounts = (await FireflyQueryService.GetAccounts())
@@ -68,8 +72,10 @@
         _amount = 0;
     }
 
-    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedFromAccount) || 
-                                     string.IsNullOrEmpty(_selectedToAccount) || 
-                                     string.IsNullOrEmpty(_description) || 
+    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedFromAccount) ||
+                                     string.IsNullOrEmpty(_selectedToAccount) ||
+                                     _selectedFromAccount == _selectedToAccount ||
+                                     string.IsNullOrEmpty(_description) ||
                                      _amount <= 0;
+
 }

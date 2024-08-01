@@ -21,7 +21,11 @@
                     FilterOperator="StringFilterOperator.Contains" 
                     AllowFiltering="true"
                     AllowClear="true" />
-    <RadzenDatePicker @bind-Value="_selectedDate" DateFormat="yyyy-MM-dd" class="input-control"/>
+    <RadzenDatePicker class="input-control"
+                      @bind-Value="_selectedDate"
+                      DateFormat="yyyy-MM-dd"
+                      Min="DateTime.Today.AddMonths(-2)"
+                      Max="DateTime.Today"/>
     <RadzenTextBox @bind-Value="_description" Placeholder="Description" class="input-control"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
