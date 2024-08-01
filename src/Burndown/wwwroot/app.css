@@ -115,3 +115,14 @@ a.nav-link {
 .nav-scrollable {
     height: auto !important;
 }
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.success-message {
+    color: green;
+    margin-top: 15px;
+}
