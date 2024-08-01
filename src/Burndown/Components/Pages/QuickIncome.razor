@@ -1,22 +1,22 @@
-﻿@page "/qe"
+﻿@page "/qi"
 @using Burndown.Models
 @using Burndown.Services
 
 @inject FireflyQueryService FireflyQueryService
-@inject ExpenseService ExpenseService
+@inject IncomeService IncomeService
 
-<PageTitle>Quick expense</PageTitle>
+<PageTitle>Quick income</PageTitle>
 
-<h1 class="page-title">Quick expense</h1>
+<h1 class="page-title">Quick income</h1>
 
 <div class="form-container">
-    <RadzenDropDown @bind-Value="_selectedSourceAccount"
+    <RadzenDropDown @bind-Value="_selectedAccount"
                     class="input-control"
                     FilterDelay="100"
                     Data="_accounts"
                     TextProperty="@nameof(Account.Name)"
                     ValueProperty="@nameof(Account.Id)"
-                    Placeholder="Source Account"
+                    Placeholder="Target Account"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     FilterOperator="StringFilterOperator.Contains"
                     AllowFiltering="true"
@@ -35,14 +35,9 @@
                         Placeholder="Description"
                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
-    <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
-    <h5 class="label">Target</h5>
-    <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets" Orientation="Orientation.Vertical"/>
-    <h5 class="label">Budget</h5>
-    <RadzenRadioButtonList TValue="int?" @bind-Value="_selectedBudget" Data="@_budgets" Orientation="Orientation.Vertical" TextProperty="@nameof(Budget.Name)" ValueProperty="@nameof(Budget.Id)"/>
     <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
-    @if (_submittedExpense != null) {
-        <div class="success-message">Expense '@_submittedExpense.Description' submitted successfully!</div>
+    @if (_submittedIncome != null) {
+        <div class="success-message">Transfer '@_submittedIncome.Description' submitted successfully!</div>
     }
     @if (_error != null) {
         <div class="error-message">An error occurred: @_error</div>
@@ -51,50 +46,35 @@
 
 @code {
     private List<Account> _accounts = new();
-    private string? _selectedSourceAccount;
+    private string? _selectedAccount;
     private DateTime _selectedDate = DateTime.Now;
     private string? _description;
     private decimal _amount;
-    private string? _selectedCategory;
-    private readonly List<string> _categories = ["Leven", "Nodig", "Optioneel", "Folietjes"];
-
-    private readonly List<Budget> _budgets = [
-        new Budget { Id = null, Name = "[None]" },
-        new Budget { Id = 13, Name = "David" },
-        new Budget { Id = 14, Name = "Tina" }
-    ];
-
-    private string? _selectedTarget;
-    private int? _selectedBudget;
-    private readonly List<string> _targets = ["SharedDavid", "SharedTina", "Tina", "David", "Settled"];
-    private Models.QuickExpense? _submittedExpense;
+    private Models.QuickIncome? _submittedIncome;
     private string? _error;
     private List<string> _transactionNames = new();
 
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
-        _submittedExpense = null;
+        _submittedIncome = null;
         _accounts = (await FireflyQueryService.GetAccounts())
             .OrderBy(a => a.Name)
             .ToList();
     }
 
     private async Task OnSubmit() {
-        _submittedExpense = new Models.QuickExpense {
-            Account = _selectedSourceAccount!,
+        _submittedIncome = new Models.QuickIncome {
+            Account = _selectedAccount!,
             Date = _selectedDate,
             Description = _description!,
-            Amount = _amount,
-            Category = _selectedCategory!,
-            Target = _selectedTarget!,
-            Budget = _selectedBudget
+            Amount = _amount
         };
         try {
-            await ExpenseService.AddQuickExpense(_submittedExpense);
+            await IncomeService.AddQuickIncome(_submittedIncome);
             _error = null;
         }
         catch (Exception e) {
-            _submittedExpense = null;
+            _submittedIncome = null;
             _error = e.Message;
             return;
         }
@@ -106,10 +86,8 @@
         _transactionNames = (await FireflyQueryService.GetTransactionNames(args.Filter)).ToList();
     }
 
-    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedSourceAccount) ||
+    private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedAccount) ||
                                      string.IsNullOrEmpty(_description) ||
-                                     _amount <= 0 ||
-                                     string.IsNullOrEmpty(_selectedCategory) ||
-                                     string.IsNullOrEmpty(_selectedTarget);
+                                     _amount <= 0;
 
 }

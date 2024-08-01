@@ -94,8 +94,7 @@
         _description = string.Empty;
         _amount = 0;
     }
-
-
+    
     private async Task LoadTransactionNames(LoadDataArgs args) {
         _transactionNames = (await FireflyQueryService.GetTransactionNames(args.Filter)).ToList();
     }
