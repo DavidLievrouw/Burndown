@@ -2,6 +2,7 @@
 @using Burndown.Models
 @using Burndown.Services
 
+@inject AutocompleteService AutocompleteService
 @inject AccountService AccountService
 @inject ExpenseService ExpenseService
 
@@ -104,7 +105,7 @@
     }
 
     private async Task LoadTransactionNames(LoadDataArgs args) {
-        _transactionNames = (await AccountService.GetTransactionNames(args.Filter)).ToList();
+        _transactionNames = (await AutocompleteService.GetTransactionNames(args.Filter)).ToList();
     }
 
     private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedSourceAccount) ||

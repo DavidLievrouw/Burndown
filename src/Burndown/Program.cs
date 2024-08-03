@@ -16,6 +16,13 @@ builder.Services
             client.BaseAddress = fireflySettings.Value.BackChannelBaseAddress;
         }
     ).Services
+    .AddSingleton<AutocompleteService>()
+    .AddHttpClient<AutocompleteService>(
+        (provider, client) => {
+            var fireflySettings = provider.GetRequiredService<IOptions<FireflySettings>>();
+            client.BaseAddress = fireflySettings.Value.BackChannelBaseAddress;
+        }
+    ).Services
     .AddSingleton<AccountService>()
     .AddHttpClient<AccountService>(
         (provider, client) => {
