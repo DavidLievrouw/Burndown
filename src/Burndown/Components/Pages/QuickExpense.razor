@@ -36,7 +36,8 @@
                         Placeholder="Description"
                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
-    <RadzenDropDown @bind-Value="_selectedCategory" Data="@_categories" Placeholder="Select Category" class="input-control"/>
+    <h5 class="label">Category</h5>
+    <RadzenRadioButtonList TValue="string" @bind-Value="_selectedCategory" Data="@_categories" Orientation="Orientation.Vertical"/>
     <h5 class="label">Target</h5>
     <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets" Orientation="Orientation.Vertical"/>
     <h5 class="label">Budget</h5>
