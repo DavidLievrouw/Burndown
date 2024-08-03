@@ -2,7 +2,7 @@
 @using Burndown.Models
 @using Burndown.Services
 
-@inject FireflyQueryService FireflyQueryService
+@inject AccountService AccountService
 @inject IncomeService IncomeService
 
 <PageTitle>Quick income</PageTitle>
@@ -57,7 +57,7 @@
     protected override async Task OnInitializedAsync() {
         await base.OnInitializedAsync();
         _submittedIncome = null;
-        _accounts = (await FireflyQueryService.GetAccounts())
+        _accounts = (await AccountService.GetAccounts())
             .OrderBy(a => a.Name)
             .ToList();
     }
@@ -84,7 +84,7 @@
     }
 
     private async Task LoadTransactionNames(LoadDataArgs args) {
-        _transactionNames = (await FireflyQueryService.GetTransactionNames(args.Filter)).ToList();
+        _transactionNames = (await AccountService.GetTransactionNames(args.Filter)).ToList();
     }
 
     private bool IsSubmitDisabled => string.IsNullOrEmpty(_selectedAccount) ||

@@ -3,7 +3,8 @@
 @using Burndown.Services
 @using System.Globalization
 
-@inject FireflyQueryService FireflyQueryService
+@inject ExpenseService ExpenseService
+@inject IncomeService IncomeService
 @inject AuthorizationService AuthorizationService
 @inject NavigationManager NavigationManager
 
@@ -136,9 +137,9 @@
     private async Task Reload() {
         IsLoading = true;
 
-        IncomeOfPreviousMonth = await FireflyQueryService.GetIncomeOfPreviousMonth(SelectedMonth);
-        MonthlyInstallments = await FireflyQueryService.GetMonthlyInstallmentsAmountOfPreviousMonth(SelectedMonth);
-        Expenses = await FireflyQueryService.GetExpenses(SelectedMonth);
+        IncomeOfPreviousMonth = await IncomeService.GetIncomeOfPreviousMonth(SelectedMonth);
+        MonthlyInstallments = await ExpenseService.GetMonthlyInstallmentsAmountOfPreviousMonth(SelectedMonth);
+        Expenses = await ExpenseService.GetExpenses(SelectedMonth);
 
         if (PreviousMonthBudget < 1) {
             PreviousMonthBudget = IncomeOfPreviousMonth - MonthlyInstallments;
