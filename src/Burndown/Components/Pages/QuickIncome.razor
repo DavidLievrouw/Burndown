@@ -71,6 +71,7 @@
         };
         try {
             await IncomeService.AddQuickIncome(_submittedIncome);
+            _selectedDate = _selectedDate.AddMinutes(1);
             _error = null;
         }
         catch (Exception e) {

@@ -91,6 +91,7 @@
         };
         try {
             await ExpenseService.AddQuickExpense(_submittedExpense);
+            _selectedDate = _selectedDate.AddMinutes(1);
             _error = null;
         }
         catch (Exception e) {
