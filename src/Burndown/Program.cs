@@ -63,7 +63,8 @@ builder.Services
             options.Cookie.IsEssential = true;
         }
     )
-    .AddRadzenComponents();
+    .AddRadzenComponents()
+    .AddLocalization();
 
 var app = builder.Build();
 
@@ -78,6 +79,8 @@ app.UseAntiforgery();
 app.MapControllers();
 
 app.UseSession();
+    
+app.UseRequestLocalization("en-GB");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
