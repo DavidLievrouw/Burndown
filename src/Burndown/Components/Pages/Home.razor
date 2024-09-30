@@ -21,7 +21,8 @@
             <label style="min-width: 120px;">Select a month:</label>
             <RadzenButton Click="@(args => DecreaseMonth())" Text=" < " Disabled="@(SelectedMonth <= MinDate)" ButtonStyle="ButtonStyle.Light"/>
             <RadzenDatePicker
-                @bind-Value="SelectedMonth"
+                Value="@SelectedMonth" 
+                ValueChanged="@OnCurrentDateChanged"
                 style="min-width: 116px;"
                 TValue="DateTime"
                 ShowDays="false"
@@ -98,7 +99,7 @@
 
 @code {
     private DateTime MinDate { get; } = new(2023, 12, 1);
-    private DateTime MaxDate { get; } = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+    private DateTime MaxDate { get; } = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1).AddMonths(1);
 
     private bool IsLoading { get; set; } = true;
     private DateTime SelectedMonth { get; set; } = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
