@@ -37,11 +37,25 @@
                         FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"/>
     <RadzenNumeric @bind-Value="_amount" Placeholder="Amount in euro" Format="0.00" class="input-control"/>
     <h5 class="label">Category</h5>
-    <RadzenRadioButtonList TValue="string" @bind-Value="_selectedCategory" Data="@_categories" Orientation="Orientation.Vertical"/>
+    <RadzenRadioButtonList class="input-control"
+                           TValue="string" 
+                           @bind-Value="_selectedCategory" 
+                           Data="@_categories" 
+                           Orientation="Orientation.Vertical"/>
     <h5 class="label">Target</h5>
-    <RadzenRadioButtonList TValue="string" @bind-Value="_selectedTarget" Data="@_targets" Orientation="Orientation.Vertical"/>
+    <RadzenRadioButtonList class="input-control"
+                           TValue="string" 
+                           @bind-Value="_selectedTarget" 
+                           Data="@_targets" 
+                           Orientation="Orientation.Vertical"/>
     <h5 class="label">Budget</h5>
-    <RadzenRadioButtonList TValue="int?" @bind-Value="_selectedBudget" Data="@_budgets" Orientation="Orientation.Vertical" TextProperty="@nameof(Budget.Name)" ValueProperty="@nameof(Budget.Id)"/>
+    <RadzenRadioButtonList class="input-control"
+                           TValue="int?" 
+                           @bind-Value="_selectedBudget"
+                           Data="@_budgets" 
+                           Orientation="Orientation.Vertical"
+                           TextProperty="@nameof(Budget.Name)"
+                           ValueProperty="@nameof(Budget.Id)"/>
     <RadzenButton Text="Submit" Click="OnSubmit" Disabled="@IsSubmitDisabled" class="input-control"/>
     @if (_submittedExpense != null) {
         <div class="success-message">Expense '@_submittedExpense.Description' submitted successfully!</div>
