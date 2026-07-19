@@ -13,7 +13,11 @@ internal class AutocompleteService {
         _httpClient = httpClient;
     }
 
-    public async Task<IEnumerable<string>> GetTransactionNames(string query) {
+    public async Task<IEnumerable<string>> GetTransactionNames(string? query) {
+        if (string.IsNullOrEmpty(query)) {
+            return [];
+        }
+        
         var accessToken = GetAccessToken();
 
         var request = new HttpRequestMessage(HttpMethod.Get, "api/v1/autocomplete/transactions?query=" + HttpUtility.UrlEncode(query));

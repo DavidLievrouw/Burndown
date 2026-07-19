@@ -173,7 +173,7 @@
     }
 
     static void CellRender(DataGridCellRenderEventArgs<DayToRender> obj) {
-        if (obj.Data.Date.DayOfWeek == DayOfWeek.Saturday || obj.Data.Date.DayOfWeek == DayOfWeek.Sunday) {
+        if (obj.Data?.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) {
             obj.Attributes["style"] = "background-color: #eaeaea;";
         }
     }
