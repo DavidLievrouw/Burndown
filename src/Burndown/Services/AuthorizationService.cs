@@ -65,7 +65,7 @@ public class AuthorizationService {
             Content = new FormUrlEncodedContent(
                 new Dictionary<string, string> {
                     { "grant_type", "authorization_code" },
-                    { "client_id", fireflySettings.ClientId.ToString() },
+                    { "client_id", fireflySettings.ClientId },
                     { "client_secret", fireflySettings.ClientSecret },
                     { "code", code },
                     { "redirect_uri", fireflySettings.RedirectUri.AbsoluteUri }

@@ -3,7 +3,7 @@
 public class FireflySettings {
     public required Uri FrontChannelBaseAddress { get; init; }
     public required Uri BackChannelBaseAddress { get; init; }
-    public int ClientId { get; init; }
+    public required string ClientId { get; init; }
     public required string ClientSecret { get; init; }
 
     public Uri AuthorizationEndpoint =>
