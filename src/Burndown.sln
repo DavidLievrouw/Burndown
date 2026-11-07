@@ -9,6 +9,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Assets", "Assets", "{DE9A0D
 		..\docker-compose.yml = ..\docker-compose.yml
 		..\run.ps1 = ..\run.ps1
 		..\publish.cmd = ..\publish.cmd
+		..\AGENTS.md = ..\AGENTS.md
+		..\PLAN.md = ..\PLAN.md
+		..\HANDOVER.md = ..\HANDOVER.md
 	EndProjectSection
 EndProject
 Global
