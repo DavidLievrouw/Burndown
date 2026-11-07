@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/node_modules/
+.git/
+.env
+src/tests/
+src/Burndown/
+dist/

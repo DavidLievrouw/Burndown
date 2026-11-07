@@ -7,7 +7,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | Milestone | Status |
 |-----------|--------|
 | Planning (AGENTS.md, PLAN.md) | Reviewed twice; all owner questions answered (D12, D15, D21); ready for M0 |
-| M0 Scaffolding and tooling | Not started |
+| M0 Scaffolding and tooling | Delivered, awaiting owner review |
 | M1 Firefly client and test infrastructure | Not started |
 | M2 Overview back-end | Not started |
 | M3 Overview UI and chart | Not started |
@@ -26,10 +26,32 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   three questions: Asset accounts only (D12), last-use ranking in server process memory (D15), no paste (D21).
 - Owner-created and committed: `.editorconfig`, `.csharpierrc.yaml`.
 
-## Next: M0 – Scaffolding and tooling
+### M0 – Scaffolding and tooling (delivered)
 
-See `PLAN.md`. Configuration defaults are settled: account `16` is Firefly's Cash account (setting `CashAccountId`),
-budgets `13` = David and `14` = Tina. No open owner questions.
+- Root: `global.json` (SDK 10.0.200, MTP runner), `NuGet.config`, `dotnet-tools.json` (CSharpier 1.3.0),
+  `.csharpierignore`, `.gitattributes`, `.dockerignore`, `.gitignore` additions. `src/Directory.Build.props` and
+  `src/Directory.Packages.props` apply only to projects named `Burndown.*` (via a `MSBuildProjectName.StartsWith`
+  condition); the old `src/Burndown` still builds unchanged.
+- Projects in `src/Burndown.sln`: `Burndown.Common` (`Result`, `Error`, `AppClock`), `Burndown.Firefly` (options),
+  `Burndown.Overview` and `Burndown.Entry` (options + validators + module registration), `Burndown.Web` (host),
+  `tests/Burndown.UnitTests`, `tests/Burndown.ArchitectureTests`.
+- Host: Kestrel on `127.0.0.1:9142` unless `urls` is set, network-free options validation at startup (fail fast, token
+  never logged), Serilog, `AllowedHosts` restriction, Origin/Content-Type protection for non-GET `/api` requests (Vite
+  origin in Development only), `/health/live`, `/health/ready` (stub: always unhealthy until M1), `--health-check`,
+  `/api` 404 and SPA fallback.
+- Client `src/Burndown.Client`: Vite + React 19 + TypeScript strict + Tailwind 4 + TanStack Query + Biome + Vitest; dark
+  theme tokens; placeholder page showing the `/health/live` status; builds into `src/Burndown.Web/wwwroot`; dev server
+  `127.0.0.1:5173` proxying `/api` and `/health` to the BFF.
+- Checks: `dotnet build src/Burndown.sln -warnaserror` 0 warnings; XML-doc build 0 Roslynator warnings in new
+  projects; CSharpier check clean; 79 .NET tests pass (71 unit, 8 architecture); client `npm ci`, `lint`, `build`
+  and `test` (2 tests) pass. Smoke test of the built host with a fake token: live 200, ready 503, unknown `/api` 404,
+  foreign Origin POST 403, foreign Host 400, `--health-check` exit 0.
+
+## Next: M1 – Firefly client and throwaway-Firefly test infrastructure
+
+See `PLAN.md`. Typed Firefly client with Vogen ids, pagination and error mapping, the real `/health/ready` check, the
+Testcontainers Firefly fixture and characteristics tests. Configuration defaults are settled: account `16` is Firefly's
+Cash account (setting `CashAccountId`), budgets `13` = David and `14` = Tina. No open owner questions.
 
 ## Environment facts
 
@@ -40,9 +62,14 @@ budgets `13` = David and `14` = Tina. No open owner questions.
 - Old app: port 9042. New app: port 9142 until the old one is removed.
 - Reference repos: `C:\_git\MovieDB`, `C:\_git\Motorsports` (never read their `prompt-history*` files).
 - Uncommitted owner changes: `src/Burndown/appsettings.Development.json` (contains the old OAuth secret: never touch,
-  stage or copy it). `src/Burndown.sln` is currently clean.
+  stage or copy it). `src/Burndown.sln` now includes the new projects (uncommitted).
 
 ## Learnings
+
+- M0: `dotnet test --nologo` silently runs zero tests in MTP mode (exit code 5); omit the flag. Run a built host from
+  its output folder. The Vite build output in `wwwroot` is picked up by the Development static-web-assets manifest, so
+  host tests assert on `<html`, not on test-specific content. Client tool versions are pinned by `package-lock.json`
+  (TypeScript kept at 5.9 for tooling safety). `Vogen` is in the central package list but not used yet (M1).
 
 - The old app has a quote-injection bug (string-built JSON), an unvalidated OAuth `state`, `limit=999` with no paging,
   and direct `DateTime.Now` use. Do not port those patterns.

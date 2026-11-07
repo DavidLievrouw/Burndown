@@ -1,0 +1,4 @@
+src/Burndown/
+**/bin/
+**/obj/
+**/node_modules/

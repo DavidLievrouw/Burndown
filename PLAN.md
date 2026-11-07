@@ -212,6 +212,8 @@ Each milestone ends with: build, format check, tests, handover update, then **st
 
 ### M0 – Scaffolding and tooling
 
+**Status: delivered, awaiting owner review.** See `HANDOVER.md` for the details and check results.
+
 - Add `global.json` (SDK 10.0.200, `rollForward: latestFeature`, `test.runner: Microsoft.Testing.Platform`, copy from
   Motorsports), `dotnet-tools.json` (CSharpier), `NuGet.config`, `.gitattributes` (LF), `.csharpierignore`
   (including `src/Burndown/`), `.dockerignore`, `.gitignore` additions (`.env`, `artifacts/`, `node_modules`, client

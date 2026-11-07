@@ -331,3 +331,11 @@ build/*/content/*
 # Custom
 dist
 dev-dist
+
+# Burndown rewrite
+.env
+src/Burndown.Client/coverage/
+src/Burndown.Client/*.tsbuildinfo
+src/Burndown.Web/wwwroot/*
+!src/Burndown.Web/wwwroot/.gitkeep
+TestResults/

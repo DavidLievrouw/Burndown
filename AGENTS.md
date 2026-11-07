@@ -289,19 +289,21 @@ Run the smallest relevant checks, then expand when results warrant it:
 4. Inspect the final diff and ensure no generated artifacts, secrets, tokens or unrelated changes are included.
 5. Update `PLAN.md` (milestone status, answered questions) and, at the end of every milestone, `HANDOVER.md`.
 
-**Repository commands** (run from the repository root; the exact commands are confirmed or corrected in milestone M0):
+**Repository commands** (run from the repository root; confirmed in M0):
 
 - Restore tools: `dotnet tool restore`
 - Build: `dotnet build src/Burndown.sln -warnaserror` (the old project is not built under the new rules: the shared
   `src/Directory.Build.props`/`Directory.Packages.props` settings apply only to projects whose name starts with
-  `Burndown.`, so `src/Burndown` is unaffected; confirm the exact mechanism in M0 and record it in `HANDOVER.md`).
+  `Burndown.`, so `src/Burndown` is unaffected).
 - XML-doc build: the same build with `-p:GenerateDocumentationFile=true -p:TreatWarningsAsErrors=false --no-incremental`
 - Format: `dotnet csharpier format <project folders>` ; check: `dotnet csharpier check <project folders>`, where the
   folders are the `Burndown.*` project folders and `src/tests` (do not use the glob `src/Burndown.*`: it also matches
-  `Burndown.sln`; M0 records the exact working command). A `.csharpierignore` entry for `src/Burndown/` also protects
+  `Burndown.sln`). Working command: `dotnet csharpier format src/Burndown.Common src/Burndown.Firefly
+  src/Burndown.Overview src/Burndown.Entry src/Burndown.Web src/tests` (and `check`). A `.csharpierignore` entry for `src/Burndown/` also protects
   the old project. Never reformat `src/Burndown`.
 - Test: `dotnet test --solution src/Burndown.sln` (the fast subset excludes the container-based and browser tests; see
-  `HANDOVER.md`)
+  `HANDOVER.md`). Do not pass `--nologo` to `dotnet test`: in Microsoft.Testing.Platform mode it is forwarded to the
+  test app and the run silently reports "Zero tests ran" (exit code 5).
 - Front-end (in the client folder): `npm ci`, `npm run dev`, `npm run build`, `npm run lint`, `npm test`
 - Publish container: `docker compose` file under `docker-compose/` (see Deployment)
 
@@ -313,7 +315,12 @@ Platform gotchas:
 - If Git reports "dubious ownership", use `git -c safe.directory=<repo path> ...`.
 - Roslynator rules are enforced by the build (for example prefer `[0]` over `First()` on lists).
 - `dotnet test --solution` with xUnit v3 needs `global.json` to select the Microsoft.Testing.Platform runner
-  (`"test": { "runner": "Microsoft.Testing.Platform" }`, as in Motorsports); M0 adds it.
+  (`"test": { "runner": "Microsoft.Testing.Platform" }`, as in Motorsports); it is in place.
+- When running the host from a built output (`dotnet Burndown.Web.dll`), the working directory must be the output
+  folder, otherwise `appsettings.json` is not found and startup validation fails.
+- The Vite build writes into `src/Burndown.Web/wwwroot` (git-ignored except `.gitkeep`, which the build restores). In
+  Development the host serves it through the static-web-assets manifest, so tests must not assume the web root is
+  empty; the host tests assert on `<html` only.
 - Do not enable `InvariantGlobalization`: the `nl-BE` culture and the IANA time zone need ICU and tzdata (both are in
   the `chiseled-extra` image).
 - The git root is `C:\David\Programmatuur\Burndown`; the solution file and old sources live under `src\`.
