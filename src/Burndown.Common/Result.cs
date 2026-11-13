@@ -3,7 +3,11 @@ namespace Burndown.Common;
 /// <summary>An expected failure: a stable machine-readable code and a user-readable message.</summary>
 /// <param name="Code">Stable identifier of the failure kind, for example <c>validation</c> or <c>firefly.unauthorized</c>.</param>
 /// <param name="Message">Message that is safe to show to the user. It never contains secrets or response bodies.</param>
-public sealed record Error(string Code, string Message);
+/// <param name="Fields">
+/// Per-field validation messages, keyed by field name (for example <c>description</c> or <c>source_id</c>), or
+/// <see langword="null"/> when the failure is not tied to specific fields.
+/// </param>
+public sealed record Error(string Code, string Message, IReadOnlyDictionary<string, string[]>? Fields = null);
 
 /// <summary>The outcome of an operation that can fail in an expected way and returns no value.</summary>
 public readonly struct Result

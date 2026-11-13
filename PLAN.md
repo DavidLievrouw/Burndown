@@ -241,6 +241,22 @@ Each milestone ends with: build, format check, tests, handover update, then **st
   a trait so the fast subset excludes them.
 - Characteristics tests: pagination, 422 mapping, 401 handling, create then read back.
 
+**Delivered (M1) and what the throwaway Firefly 6.6.6 taught us:**
+
+- Accounts: no account-autocomplete endpoint is called; the client lists Asset accounts (paged) and the UI filters
+  client-side (this is what AGENTS.md requires anyway). Description autocomplete is `autocomplete/transactions`.
+- `Firefly:TimeoutSeconds` (default 30, validated 1..300) is a new option.
+- D12 check: Firefly accepts a deposit into an expense account and a deposit from the cash account into an asset
+  account; it rejects a withdrawal from a revenue account. The asset-only rule is therefore the app's own.
+- Description maximum is **1000** characters (1001 gives a 422 on `description`).
+- Amounts with three decimals are accepted by Firefly, so the app must enforce two decimals itself.
+- A transfer with equal source and destination, and an unknown budget, give field-keyed 422s (`budget_id`).
+- GET of a non-existent resource by id answers **401**, not 404. The client only uses list calls.
+- The cash account is created on demand by a withdrawal without a destination; its id is not predictable, so tests
+  look it up with `accounts?type=cash`.
+- Date ranges (`start`/`end`) are day-inclusive in Firefly's own time zone (`TZ` env, `Europe/Brussels` in the
+  fixture). Mind DST when building test timestamps (`+02:00` in summer).
+
 ### M2 – Overview back-end
 
 - Port `DataProcessor` rules (see "Overview specification" above) into `Burndown.Overview` as pure, tested logic with the
@@ -308,6 +324,8 @@ Each milestone ends with: build, format check, tests, handover update, then **st
   PHP artisan step; investigate in M1 and record the working recipe. Firefly III supports SQLite
   (`DB_CONNECTION=sqlite`), which avoids a second database container: try that first. Docker is Rancher Desktop on
   Windows: confirm Testcontainers finds the engine (it may need `DOCKER_HOST` or the Ryuk setting) and record the fix.
+  **Resolved in M1:** SQLite works; the token is created by a small PHP script (`bootstrap.php`); Testcontainers
+  and Ryuk work with Rancher Desktop without extra settings. See `HANDOVER.md`.
 - Firefly's description autocomplete may not rank by recency; its order is used as-is (D15). Account/category/tag/budget
   ranking is the in-memory last-use tracker (D15).
 - Budgets `13`/`14` = David/Tina (owner-confirmed); account `16` = Firefly Cash account (verified).

@@ -10,4 +10,7 @@ internal sealed class FireflyOptions
 
     /// <summary>Gets or sets the personal access token. This is a secret: it must never be logged.</summary>
     public string? Token { get; set; }
+
+    /// <summary>Gets or sets the timeout of a single Firefly request, in seconds.</summary>
+    public int TimeoutSeconds { get; set; } = 30;
 }

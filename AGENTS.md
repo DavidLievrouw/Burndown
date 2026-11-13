@@ -301,7 +301,10 @@ Run the smallest relevant checks, then expand when results warrant it:
   `Burndown.sln`). Working command: `dotnet csharpier format src/Burndown.Common src/Burndown.Firefly
   src/Burndown.Overview src/Burndown.Entry src/Burndown.Web src/tests` (and `check`). A `.csharpierignore` entry for `src/Burndown/` also protects
   the old project. Never reformat `src/Burndown`.
-- Test: `dotnet test --solution src/Burndown.sln` (the fast subset excludes the container-based and browser tests; see
+- Fast tests (no Docker): `dotnet test --solution src/Burndown.sln --filter-not-trait "Category=Characteristics"`.
+  Characteristics tests (throwaway Firefly container, needs Docker, about 20 s):
+  `dotnet test --project src/tests/Burndown.CharacteristicsTests/Burndown.CharacteristicsTests.csproj`.
+- Test: `dotnet test --solution src/Burndown.sln` (runs everything including the container tests; see
   `HANDOVER.md`). Do not pass `--nologo` to `dotnet test`: in Microsoft.Testing.Platform mode it is forwarded to the
   test app and the run silently reports "Zero tests ran" (exit code 5).
 - Front-end (in the client folder): `npm ci`, `npm run dev`, `npm run build`, `npm run lint`, `npm test`

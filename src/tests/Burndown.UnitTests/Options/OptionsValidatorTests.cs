@@ -146,6 +146,24 @@ public class OptionsValidatorTests
         new FireflyOptionsValidator().Validate(null, options).Succeeded.ShouldBe(valid);
     }
 
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(30, true)]
+    [InlineData(300, true)]
+    [InlineData(301, false)]
+    public void Firefly_options_bound_the_timeout(int seconds, bool valid)
+    {
+        var options = new FireflyOptions
+        {
+            BaseUrl = "http://localhost:8042",
+            Token = "t",
+            TimeoutSeconds = seconds,
+        };
+
+        new FireflyOptionsValidator().Validate(null, options).Succeeded.ShouldBe(valid);
+    }
+
     [Fact]
     public void Firefly_validation_messages_never_contain_the_token()
     {

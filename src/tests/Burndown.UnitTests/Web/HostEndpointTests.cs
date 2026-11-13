@@ -36,7 +36,7 @@ public class HostEndpointTests
     }
 
     [Fact]
-    public async Task Ready_health_check_is_unhealthy_until_the_firefly_check_exists()
+    public async Task Ready_health_check_is_unhealthy_when_firefly_cannot_be_reached()
     {
         await using var factory = new TestWebApplicationFactory();
         using var client = factory.CreateClient();

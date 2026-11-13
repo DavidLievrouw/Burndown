@@ -8,7 +8,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 |-----------|--------|
 | Planning (AGENTS.md, PLAN.md) | Reviewed twice; all owner questions answered (D12, D15, D21); ready for M0 |
 | M0 Scaffolding and tooling | Delivered, awaiting owner review |
-| M1 Firefly client and test infrastructure | Not started |
+| M1 Firefly client and test infrastructure | Delivered, awaiting owner review |
 | M2 Overview back-end | Not started |
 | M3 Overview UI and chart | Not started |
 | M4 Entry back-end | Not started |
@@ -37,7 +37,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   `tests/Burndown.UnitTests`, `tests/Burndown.ArchitectureTests`.
 - Host: Kestrel on `127.0.0.1:9142` unless `urls` is set, network-free options validation at startup (fail fast, token
   never logged), Serilog, `AllowedHosts` restriction, Origin/Content-Type protection for non-GET `/api` requests (Vite
-  origin in Development only), `/health/live`, `/health/ready` (stub: always unhealthy until M1), `--health-check`,
+  origin in Development only), `/health/live`, `/health/ready` (stub in M0; real since M1), `--health-check`,
   `/api` 404 and SPA fallback.
 - Client `src/Burndown.Client`: Vite + React 19 + TypeScript strict + Tailwind 4 + TanStack Query + Biome + Vitest; dark
   theme tokens; placeholder page showing the `/health/live` status; builds into `src/Burndown.Web/wwwroot`; dev server
@@ -47,11 +47,39 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   and `test` (2 tests) pass. Smoke test of the built host with a fake token: live 200, ready 503, unknown `/api` 404,
   foreign Origin POST 403, foreign Host 400, `--health-check` exit 0.
 
-## Next: M1 – Firefly client and throwaway-Firefly test infrastructure
+### M1 – Firefly client and test infrastructure (delivered)
 
-See `PLAN.md`. Typed Firefly client with Vogen ids, pagination and error mapping, the real `/health/ready` check, the
-Testcontainers Firefly fixture and characteristics tests. Configuration defaults are settled: account `16` is Firefly's
-Cash account (setting `CashAccountId`), budgets `13` = David and `14` = Tina. No open owner questions.
+- `Burndown.Firefly`: Vogen ids (`AccountId`, `BudgetId`, `TransactionId`), `IFireflyClient` + `FireflyClient` (typed
+  `HttpClient`, Bearer token, `Firefly:TimeoutSeconds`, no redirects, no retries), full pagination via
+  `meta.pagination` (guard: 1000 pages, page size 100), typed models, wire DTOs and mapper (System.Text.Json only),
+  error mapping (`firefly.unauthorized/forbidden/unavailable/timeout/validation/invalid_response/unexpected`; 422 bodies
+  become per-field messages, `transactions.N.` prefix stripped), `FireflyReadinessCheck`. Caller cancellation
+  propagates; only the client's own timeout maps to `firefly.timeout`. Logs carry method, path (no query) and status only.
+- `Burndown.Entry`: `EntryConfigurationCheck` (configured cash account and budgets exist in Firefly). Both checks are
+  tagged `HealthTags.Ready` and drive `/health/ready`. `Error` gained an optional `Fields` dictionary.
+- Tests: `tests/Burndown.UnitTests/Firefly` (stubbed handler: status mapping, timeout, cancellation, pagination,
+  mapping, 422 normalisation, create JSON shape, no retry on create, log hygiene, readiness checks) and the new
+  `tests/Burndown.CharacteristicsTests` (15 tests, trait `Category=Characteristics`) against a real throwaway Firefly.
+- Checks: `-warnaserror` build clean; XML-doc build has no Roslynator warnings in new projects; CSharpier clean;
+  120 fast tests (unit + architecture) and all 15 characteristics tests pass (135 total).
+- How to run: fast subset `dotnet test --solution src/Burndown.sln --filter-not-trait "Category=Characteristics"`;
+  container tests `dotnet test --project src/tests/Burndown.CharacteristicsTests/Burndown.CharacteristicsTests.csproj`
+  (needs Docker, about 20 s: the container is ready about 13 s after start; one container is shared by all tests).
+- Throwaway Firefly recipe (`Infrastructure/FireflyFixture.cs`, `bootstrap.php`): image `fireflyiii/core:version-6.6.6`,
+  SQLite (`DB_CONNECTION=sqlite`), random 32-char `APP_KEY`, `TZ=Europe/Brussels`, `TRUSTED_PROXIES=**`, port 8080,
+  wait for the log line `NGINX + PHP-FPM is running correctly`. `bootstrap.php` is copied into the container and run with
+  `php`; it creates a user, the passport personal-access client and a token, and prints `TOKEN:<jwt>`. Seeds: Checking,
+  Savings, an Employer revenue account, budgets David and Tina, and one withdrawal (which creates the cash account).
+  Rancher Desktop and Ryuk work without extra settings; the Ryuk helper container may stay listed in `docker ps -a`.
+- Firefly behaviour findings (D12, description max 1000, 401 for missing resources, 3-decimal amounts, cash-account
+  id, accounts filtered client-side) are recorded in `PLAN.md` under M1.
+- Not done on purpose: no BFF endpoints yet (M2/M4); the client has no write method other than `CreateTransactionAsync`.
+
+## Next: M2 – Overview back-end
+
+See `PLAN.md`. Month budget calculation (previous month's income and installments), the daily/cumulative burndown model
+(single place, unit-tested), `/api/overview` endpoint, bounded Firefly round trips (count them in tests). Reuse
+`IFireflyClient`; add transactions-by-range filtering already present. No open owner questions.
 
 ## Environment facts
 
@@ -69,7 +97,9 @@ Cash account (setting `CashAccountId`), budgets `13` = David and `14` = Tina. No
 - M0: `dotnet test --nologo` silently runs zero tests in MTP mode (exit code 5); omit the flag. Run a built host from
   its output folder. The Vite build output in `wwwroot` is picked up by the Development static-web-assets manifest, so
   host tests assert on `<html`, not on test-specific content. Client tool versions are pinned by `package-lock.json`
-  (TypeScript kept at 5.9 for tooling safety). `Vogen` is in the central package list but not used yet (M1).
+  (TypeScript kept at 5.9 for tooling safety). `Vogen` is used for the Firefly ids since M1; the Vogen-generated public types are allow-listed in `LayerTests`.
+- M1: Firefly date-range tests need DST-correct offsets (build `DateTimeOffset` through `TimeZoneInfo`, not a fixed `+01:00`).
+  The characteristics tests never touch the real Firefly (a throwaway container on a random port).
 
 - The old app has a quote-injection bug (string-built JSON), an unvalidated OAuth `state`, `limit=999` with no paging,
   and direct `DateTime.Now` use. Do not port those patterns.

@@ -54,12 +54,7 @@ builder.Services.AddSingleton(provider =>
 builder.Services.AddFireflyServices().AddOverviewServices().AddEntryServices();
 
 builder.Services.AddProblemDetails();
-builder
-    .Services.AddHealthChecks()
-    .AddCheck<FireflyReadinessHealthCheck>(
-        FireflyReadinessHealthCheck.Name,
-        tags: [FireflyReadinessHealthCheck.ReadyTag]
-    );
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -81,10 +76,7 @@ app.UseStaticFiles();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks(
     "/health/ready",
-    new HealthCheckOptions
-    {
-        Predicate = registration => registration.Tags.Contains(FireflyReadinessHealthCheck.ReadyTag),
-    }
+    new HealthCheckOptions { Predicate = registration => registration.Tags.Contains(HealthTags.Ready) }
 );
 
 var api = app.MapGroup("/api");
