@@ -127,4 +127,17 @@ public static class FireflyErrorCodes
 
     /// <summary>Firefly answered successfully with a body the client cannot interpret.</summary>
     public const string InvalidResponse = "firefly.invalid_response";
+
+    /// <summary>Gets the HTTP status the BFF answers with when a Firefly call failed with a code.</summary>
+    /// <param name="code">The error code.</param>
+    /// <returns>The status, or <see langword="null"/> when the code is not a Firefly code.</returns>
+    public static int? ToHttpStatusCode(string code) =>
+        code switch
+        {
+            Unauthorized or Forbidden or Unexpected or InvalidResponse => 502,
+            Unavailable => 503,
+            Timeout => 504,
+            Validation => 422,
+            _ => null,
+        };
 }

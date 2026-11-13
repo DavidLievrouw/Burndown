@@ -267,6 +267,26 @@ Each milestone ends with: build, format check, tests, handover update, then **st
   (`MonthlyInstallment` tag, expense-account destinations), "today" around midnight in zone vs UTC.
 - Parity check against the old app using the same (synthetic) data.
 
+**Delivered (M2) and decisions taken:**
+
+- `GET /api/overview?month=yyyy-MM&budgetOverride=<decimal>` (both optional). Month defaults to the current month in the
+  configured zone; allowed range 2023-12 to current month + 1. The override is invariant-culture (`.` decimal), `0` to
+  999,999,999.99, and is never stored. Errors: 400 `code: "validation"` with `errors` keyed `month`/`budgetOverride`
+  (both reported at once); Firefly failures map to 502 (401/403/unexpected/invalid response), 503 (unavailable), 504
+  (timeout) with the user-readable message as `detail` (`FireflyErrorCodes.ToHttpStatusCode`).
+- Exactly **two** parallel Firefly list calls per view: deposits over the previous month, and withdrawals from the
+  first day of the previous month to the last day of the viewed month (installments of the previous month and the
+  month's expenses). Counted in tests.
+- One calculator (`OverviewCalculator`, pure) owns budget, daily series, colour data and chart. Response = month meta,
+  `budget` (income, installments, computed, effective, overridden), `days[]` (amounts, cumulative budget, running total,
+  per-day remaining, tone green/red/none and alpha values as data), `totals`, `chart` (points day 0..N with `ideal` and
+  `actual`, `actual` null after today; `todayDay` only when today is in the viewed month). Money is rounded to 2
+  decimals once at the boundary; colours use the unrounded values. Day-0 `actual` is the budget when the month has
+  started (own definition; the spec did not fix it).
+- Deliberate differences from the old code: "today" from the configured zone (old: UTC); description order uses
+  `InvariantCultureIgnoreCase` (old: `ToLower()`). Parity verified by running the old `DataProcessor` on synthetic
+  data (Feb 2024, two budgets) in a scratch project and embedding its output as golden strings in the tests.
+
 ### M3 – Overview UI and chart
 
 - Design system basics (tokens, typography), **dark theme only** (no light mode, no switch; use dark-tuned colours,

@@ -67,6 +67,7 @@ public class LayerTests
         {
             "Burndown.Common.AppClock",
             "Burndown.Common.Error",
+            "Burndown.Common.ErrorCodes",
             "Burndown.Common.Result",
             "Burndown.Common.Result`1",
             "Burndown.Common.HealthTags",

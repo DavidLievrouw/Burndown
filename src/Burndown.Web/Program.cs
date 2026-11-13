@@ -80,6 +80,7 @@ app.MapHealthChecks(
 );
 
 var api = app.MapGroup("/api");
+api.MapOverviewEndpoints();
 api.MapFallback(() => Results.NotFound());
 app.MapFallbackToFile("index.html");
 

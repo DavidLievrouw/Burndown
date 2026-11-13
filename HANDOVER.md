@@ -9,7 +9,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | Planning (AGENTS.md, PLAN.md) | Reviewed twice; all owner questions answered (D12, D15, D21); ready for M0 |
 | M0 Scaffolding and tooling | Delivered, awaiting owner review |
 | M1 Firefly client and test infrastructure | Delivered, awaiting owner review |
-| M2 Overview back-end | Not started |
+| M2 Overview back-end | Delivered, awaiting owner review |
 | M3 Overview UI and chart | Not started |
 | M4 Entry back-end | Not started |
 | M5 Entry grid UI | Not started |
@@ -75,11 +75,30 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   id, accounts filtered client-side) are recorded in `PLAN.md` under M1.
 - Not done on purpose: no BFF endpoints yet (M2/M4); the client has no write method other than `CreateTransactionAsync`.
 
-## Next: M2 – Overview back-end
+### M2 – Overview back-end (delivered)
 
-See `PLAN.md`. Month budget calculation (previous month's income and installments), the daily/cumulative burndown model
-(single place, unit-tested), `/api/overview` endpoint, bounded Firefly round trips (count them in tests). Reuse
-`IFireflyClient`; add transactions-by-range filtering already present. No open owner questions.
+- `Burndown.Overview`: `OverviewCalculator` (pure; budget, daily series, colour data, chart), `OverviewService`
+  (validation, two parallel Firefly calls), `OverviewEndpoints` (`GET /api/overview`), `OverviewContract` (internal
+  JSON records, camelCase), module wiring; `Program.cs` calls `api.MapOverviewEndpoints()`. The project now uses the
+  ASP.NET shared framework (explicit Microsoft.Extensions package references trigger NU1510).
+- `Burndown.Common.ErrorCodes.Validation`; `FireflyErrorCodes.ToHttpStatusCode`. Details and decisions in `PLAN.md` (M2).
+- Tests (`tests/Burndown.UnitTests/Overview`, plus `Firefly/FireflyErrorCodesTests`): calculator (month lengths 28-31,
+  leap February, zero income, negative budget, override incl. 0, exclusions, descriptions, weekends, today/past/future
+  month, colour and amount ranges, rounding, two parity goldens from the old `DataProcessor`), service (default month,
+  zone vs UTC midnight, range and override validation, two calls only, failure propagation), endpoints (JSON shape,
+  400 with field errors, 502/503/504 mapping, POST refused). `ErrorCodes` added to the `LayerTests` allow-list.
+- Checks: `-warnaserror` build clean; XML-doc build no new warnings; CSharpier clean; 191 fast tests pass. The
+  container-based characteristics tests were not changed (the date-range and pagination behaviour the overview relies
+  on is already covered there); no Overview-specific container test was added.
+- Not done on purpose: no client code (M3); no caching of overview data.
+- Note: `tests/Burndown.CharacteristicsTests/Infrastructure/bootstrap.php` (needed by `FireflyFixture`) shows as
+  untracked: it was missed in the M1 commit and should be added to the next commit.
+
+## Next: M3 – Overview UI and chart
+
+See `PLAN.md`. Consume `GET /api/overview` (contract in `Burndown.Overview/OverviewContract.cs`); pick the chart
+library (Recharts recommended); month navigation, override input, polished table, accessible chart data table, states
+for loading/error (the response carries `code` and `detail` for 400/502/503/504). No open owner questions.
 
 ## Environment facts
 

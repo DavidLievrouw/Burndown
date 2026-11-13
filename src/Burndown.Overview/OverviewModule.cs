@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -16,6 +17,11 @@ public static class OverviewModule
     {
         services.AddSingleton<IValidateOptions<OverviewOptions>, OverviewOptionsValidator>();
         services.AddOptions<OverviewOptions>().BindConfiguration(OverviewOptions.Section).ValidateOnStart();
+        services.AddScoped<OverviewService>();
         return services;
     }
+
+    /// <summary>Maps the Overview endpoints.</summary>
+    /// <param name="routes">The route builder, normally the <c>/api</c> group.</param>
+    public static void MapOverviewEndpoints(this IEndpointRouteBuilder routes) => OverviewEndpoints.Map(routes);
 }
