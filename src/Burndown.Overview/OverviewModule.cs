@@ -18,6 +18,7 @@ public static class OverviewModule
         services.AddSingleton<IValidateOptions<OverviewOptions>, OverviewOptionsValidator>();
         services.AddOptions<OverviewOptions>().BindConfiguration(OverviewOptions.Section).ValidateOnStart();
         services.AddScoped<OverviewService>();
+        services.AddScoped<YearOverviewService>();
         return services;
     }
 

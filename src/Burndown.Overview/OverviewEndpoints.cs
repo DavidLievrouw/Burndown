@@ -9,9 +9,10 @@ namespace Burndown.Overview;
 /// <summary>The BFF endpoints of the Overview slice.</summary>
 internal static class OverviewEndpoints
 {
-    /// <summary>Maps <c>GET overview</c> on the given route builder.</summary>
+    /// <summary>Maps <c>GET overview</c> and <c>GET overview/year</c> on the given route builder.</summary>
     /// <param name="routes">The route builder, normally the <c>/api</c> group.</param>
-    public static void Map(IEndpointRouteBuilder routes) =>
+    public static void Map(IEndpointRouteBuilder routes)
+    {
         routes.MapGet(
             "/overview",
             async (
@@ -25,6 +26,16 @@ internal static class OverviewEndpoints
                 return result.IsSuccess ? Results.Ok(result.Value) : ToProblem(result.Error);
             }
         );
+
+        routes.MapGet(
+            "/overview/year",
+            async (string? month, YearOverviewService service, CancellationToken cancellationToken) =>
+            {
+                var result = await service.GetAsync(month, cancellationToken);
+                return result.IsSuccess ? Results.Ok(result.Value) : ToProblem(result.Error);
+            }
+        );
+    }
 
     private static IResult ToProblem(Error error)
     {

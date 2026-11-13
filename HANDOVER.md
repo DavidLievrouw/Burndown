@@ -10,7 +10,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | M0 Scaffolding and tooling | Delivered, awaiting owner review |
 | M1 Firefly client and test infrastructure | Delivered, awaiting owner review |
 | M2 Overview back-end | Delivered, awaiting owner review |
-| M3 Overview UI and chart | Not started |
+| M3 Overview UI and chart | Delivered, awaiting owner review |
 | M4 Entry back-end | Not started |
 | M5 Entry grid UI | Not started |
 | M6 Browser tests and hardening | Not started |
@@ -94,11 +94,36 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 - Note: `tests/Burndown.CharacteristicsTests/Infrastructure/bootstrap.php` (needed by `FireflyFixture`) shows as
   untracked: it was missed in the M1 commit and should be added to the next commit.
 
-## Next: M3 – Overview UI and chart
+### M3 – Overview UI and chart (delivered)
 
-See `PLAN.md`. Consume `GET /api/overview` (contract in `Burndown.Overview/OverviewContract.cs`); pick the chart
-library (Recharts recommended); month navigation, override input, polished table, accessible chart data table, states
-for loading/error (the response carries `code` and `detail` for 400/502/503/504). No open owner questions.
+- Client (`src/Burndown.Client/src`): `features/overview/` (`OverviewPage`, `MonthNav`, `OverrideField`,
+  `SummaryCards`, `DayTable`, `BurndownChart`, `ErrorPanel`, `api`, `colors`, `override`), `lib/format.ts` (the only
+  place that formats money/dates), `lib/months.ts`, `hooks/useMonthKeys.ts`. `App.tsx` renders the page. Chart library:
+  Recharts (decision recorded in `PLAN.md`). See the M3 notes in `PLAN.md` for behaviour.
+- Tests: Vitest 61 tests in 6 files (format, months, colours, override parsing, month keys hook, 12 page tests with a
+  stubbed fetch incl. 401/503/network errors and the empty month). New project `tests/Burndown.BrowserTests`
+  (Playwright for .NET, trait `Category=Browser`): real Kestrel listener, fake Firefly client, fixed clock; 3 tests
+  (render and no horizontal overflow at 1440 and 1024 px, keyboard month navigation). Set `BURNDOWN_SCREENSHOT_DIR` to
+  also write full-page screenshots. Both viewports were inspected visually and look right.
+- Checks: `-warnaserror` build clean; CSharpier clean; Biome clean; `npm run build` OK; 194 .NET tests pass (unit,
+  architecture, browser); characteristics tests were not changed.
+- Prerequisites for the browser tests: build the client first (`npm run build` in `src/Burndown.Client`) and install the
+  browser once after a build: `pwsh src/tests/Burndown.BrowserTests/bin/Debug/net10.0/playwright.ps1 install chromium`.
+  Exclude them with `--filter-not-trait "Category=Browser"` if those are missing. The "Zero tests ran" line for the
+  characteristics assembly in the fast subset is expected (it filters them all out; exit code 8).
+- **Follow-ups (owner review, see `PLAN.md`):** chart line renamed to "Break-even pace" (`ideal` → `breakEven` in the
+  contract), taller chart table, new year block (`YearOverviewService`, `GET /api/overview/year`, `YearBlock.tsx`;
+  two Firefly calls). Tests added: 7 year-service unit tests, 2 endpoint tests, 5 page tests, 1 format test, year block
+  assertions in the browser tests. Checks after the follow-ups: `-warnaserror` build, CSharpier, Biome, `npm run build`,
+  67 Vitest tests and the fast .NET suite (unit, architecture, browser) all green.
+- **Fixed (owner report):** stepping through months quickly logged 500s with `TaskCanceledException`. TanStack Query aborts the superseded browser request, which cancels the in-flight Firefly calls; the cancellation escaped as an unhandled exception. New `RequestAbortedMiddleware` (before origin protection) turns a cancellation of an aborted request into status 499 without an exception; cancellations of live requests and other exceptions still propagate. 3 unit tests. The earlier "server not reachable" report was withdrawn by the owner.
+- Not done on purpose: no Entry UI (M5); full browser flows against a throwaway Firefly are M6.
+
+## Next: M4 – Entry back-end
+
+See `PLAN.md`. Reference data endpoint (cached with TTL and refresh, ranked by an in-memory last-use tracker), description
+suggestions, batch submit with per-row results and field-error mapping, timestamp sequencing, all in `Burndown.Entry`;
+cover with unit tests and container characteristics tests. No open owner questions.
 
 ## Environment facts
 
@@ -119,6 +144,12 @@ for loading/error (the response carries `code` and `detail` for 400/502/503/504)
   (TypeScript kept at 5.9 for tooling safety). `Vogen` is used for the Firefly ids since M1; the Vogen-generated public types are allow-listed in `LayerTests`.
 - M1: Firefly date-range tests need DST-correct offsets (build `DateTimeOffset` through `TimeZoneInfo`, not a fixed `+01:00`).
   The characteristics tests never touch the real Firefly (a throwaway container on a random port).
+
+- M3: Recharts pulls in `react-is@17`; `package.json` has an `overrides` entry for `react-is` ^19. jsdom lacks
+  `ResizeObserver` (stubbed in `test-setup.ts`). Testing Library normalizes nbsp to a space, so page tests match
+  `€ 3.100,00` with a regular space (the format unit tests assert the real nbsp). `chunkSizeWarningLimit` is 800 kB
+  (Recharts makes the bundle about 640 kB). `WebApplicationFactory.UseKestrel(0)` + `StartServer()` gives a real
+  listener; read the address from `IServerAddressesFeature`. In Development the host serves the real built `wwwroot`.
 
 - The old app has a quote-injection bug (string-built JSON), an unvalidated OAuth `state`, `limit=999` with no paging,
   and direct `DateTime.Now` use. Do not port those patterns.

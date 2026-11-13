@@ -29,7 +29,7 @@ public class OverviewCalculatorTests
     [InlineData(2024, 2, 29)]
     [InlineData(2024, 4, 30)]
     [InlineData(2024, 1, 31)]
-    public void Has_one_row_per_day_and_a_ideal_line_that_burns_down_to_zero(int year, int month, int days)
+    public void Has_one_row_per_day_and_a_break_even_line_that_burns_down_to_zero(int year, int month, int days)
     {
         var first = new DateOnly(year, month, 1);
         var previous = first.AddMonths(-1);
@@ -41,8 +41,8 @@ public class OverviewCalculatorTests
         result.Days[^1].CumulativeBudget.ShouldBe(3100m);
         result.Chart.Points.Count.ShouldBe(days + 1);
         result.Chart.Points[0].Day.ShouldBe(0);
-        result.Chart.Points[0].Ideal.ShouldBe(3100m);
-        result.Chart.Points[^1].Ideal.ShouldBe(0m);
+        result.Chart.Points[0].BreakEven.ShouldBe(3100m);
+        result.Chart.Points[^1].BreakEven.ShouldBe(0m);
         result.Chart.Points[^1].Actual.ShouldBe(3100m);
     }
 
@@ -97,8 +97,8 @@ public class OverviewCalculatorTests
         result.Totals.DailyBudget.ShouldBe(-10.34m);
         result.Days[0].PerDay.ShouldBe(-10.34m);
         result.Days[^1].PerDay.ShouldBe(-300m);
-        result.Chart.Points[0].Ideal.ShouldBe(-300m);
-        result.Chart.Points[^1].Ideal.ShouldBe(0m);
+        result.Chart.Points[0].BreakEven.ShouldBe(-300m);
+        result.Chart.Points[^1].BreakEven.ShouldBe(0m);
     }
 
     [Theory]
@@ -114,7 +114,7 @@ public class OverviewCalculatorTests
         result.Budget.Effective.ShouldBe(budgetOverride);
         result.Budget.Overridden.ShouldBeTrue();
         result.Days[^1].CumulativeBudget.ShouldBe(budgetOverride);
-        result.Chart.Points[0].Ideal.ShouldBe(budgetOverride);
+        result.Chart.Points[0].BreakEven.ShouldBe(budgetOverride);
     }
 
     [Fact]

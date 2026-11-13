@@ -21,6 +21,8 @@ export default defineConfig({
   build: {
     outDir,
     emptyOutDir: true,
+    // Recharts makes the bundle larger than the default budget; it is served from localhost.
+    chunkSizeWarningLimit: 800,
   },
   server: {
     host: "127.0.0.1",

@@ -79,9 +79,23 @@ internal sealed record BurndownChart(IReadOnlyList<ChartPoint> Points, int? Toda
 
 /// <summary>One point of the burndown chart.</summary>
 /// <param name="Day">The day number; 0 is the start of the month.</param>
-/// <param name="Ideal">The remaining budget when it is spent evenly over the month.</param>
+/// <param name="BreakEven">
+/// The remaining budget when it is spent evenly over the month. Being above it means saving, below it overspending.
+/// </param>
 /// <param name="Actual">The actual remaining budget, or <see langword="null"/> for days after today.</param>
-internal sealed record ChartPoint(int Day, decimal Ideal, decimal? Actual);
+internal sealed record ChartPoint(int Day, decimal BreakEven, decimal? Actual);
+
+/// <summary>The year overview: the results of the months before the viewed month.</summary>
+/// <param name="Month">The viewed month, formatted as <c>yyyy-MM</c>.</param>
+/// <param name="Year">The year the results belong to: the viewed year, or the previous year when viewing January.</param>
+/// <param name="Total">The sum of the month results. Zero when there are none.</param>
+/// <param name="Months">The month results in calendar order. Empty when there is no previous data.</param>
+internal sealed record YearOverviewResponse(string Month, int Year, decimal Total, IReadOnlyList<MonthResult> Months);
+
+/// <summary>The result of one month: the month budget minus what was spent.</summary>
+/// <param name="Month">The month, formatted as <c>yyyy-MM</c>.</param>
+/// <param name="Result">Positive when money was saved, negative when the month was overspent.</param>
+internal sealed record MonthResult(string Month, decimal Result);
 
 /// <summary>The calculated part of the overview, which does not depend on the allowed month range.</summary>
 /// <param name="Budget">How the month budget was derived.</param>

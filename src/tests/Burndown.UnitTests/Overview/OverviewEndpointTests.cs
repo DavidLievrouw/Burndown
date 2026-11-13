@@ -59,6 +59,36 @@ public class OverviewEndpointTests
     }
 
     [Fact]
+    public async Task Serves_the_year_overview_as_camel_case_json()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        var firefly = FakeFireflyClient.Returning(Deposit(2023, 12, 5, 3000m), Withdrawal(2024, 1, 2, 500m, "Shop"));
+        using var client = CreateClient(factory, firefly);
+
+        var response = await client.GetAsync("/api/overview/year?month=2024-02", TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        json.GetProperty("year").GetInt32().ShouldBe(2024);
+        json.GetProperty("total").GetDecimal().ShouldBe(2500m);
+        json.GetProperty("months")[0].GetProperty("month").GetString().ShouldBe("2024-01");
+        json.GetProperty("months")[0].GetProperty("result").GetDecimal().ShouldBe(2500m);
+    }
+
+    [Fact]
+    public async Task Answers_400_for_an_invalid_year_overview_month()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        using var client = CreateClient(factory, FakeFireflyClient.Returning());
+
+        var response = await client.GetAsync("/api/overview/year?month=2024-04", TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        json.GetProperty("errors").TryGetProperty("month", out _).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task Applies_the_budget_override_from_the_query_string()
     {
         await using var factory = new TestWebApplicationFactory();

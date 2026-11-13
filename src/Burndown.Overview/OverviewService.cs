@@ -136,7 +136,11 @@ internal sealed class OverviewService
         );
     }
 
-    private static bool TryParseMonth(string value, out DateOnly firstDay)
+    /// <summary>Parses a <c>yyyy-MM</c> month.</summary>
+    /// <param name="value">The text to parse.</param>
+    /// <param name="firstDay">The first day of the month when parsing succeeds.</param>
+    /// <returns>Whether the text is a valid month.</returns>
+    internal static bool TryParseMonth(string value, out DateOnly firstDay)
     {
         firstDay = default;
         return value.Length == 7
@@ -149,5 +153,8 @@ internal sealed class OverviewService
             );
     }
 
-    private static string FormatMonth(DateOnly month) => month.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    /// <summary>Formats the month of a date as <c>yyyy-MM</c>.</summary>
+    /// <param name="month">A date in the month.</param>
+    /// <returns>The formatted month.</returns>
+    internal static string FormatMonth(DateOnly month) => month.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 }

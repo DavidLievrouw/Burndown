@@ -44,9 +44,8 @@ multi-user, login. Those stay in Firefly III.
 
 Pending decisions (resolve in the named milestone, then record here):
 
-- **Chart library** (M3). Recommendation: Recharts (simple, React-native, enough for a two-line chart); alternatives:
-  uPlot (tiny, fast, more manual), Chart.js. Whichever is chosen needs a visible data-table alternative and
-  keyboard-reachable tooltips.
+- ~~**Chart library** (M3).~~ **Decided in M3: Recharts** (3.10; needs the npm override `react-is` ^19 for React 19).
+  The chart data is also available as a table behind a `<details>` toggle, and a screen-reader summary is rendered.
 - **Entry grid layout** (M5). Proposal: one grid; each row has a type (`E`xpense/`I`ncome/`T`ransfer, one key) and
   type-dependent columns (see "Entry specification"). Sticky values per column. Fields not applicable to a type are
   skipped by Tab. Present a short design (keys and focus map) to the owner before building. The design must also cover:
@@ -133,7 +132,7 @@ Selected month `M`; all dates are calendar dates in the configured zone.
    - The old code rounded every alpha to 2 decimals (`0.00`, invariant culture). The server returns alphas rounded the
      same way (half away from zero), so golden tests can compare against the old output.
    - Weekends (Saturday, Sunday) are tinted; today is highlighted.
-6. **Chart** (new). X axis: day 0..N. Two lines in EUR: *ideal remaining* = `monthBudget − cumulativeBudget(d)` (from
+6. **Chart** (new). X axis: day 0..N. Two lines in EUR: *break-even pace* (dotted; was "ideal remaining") = `monthBudget − cumulativeBudget(d)` (from
    `monthBudget` at day 0 down to 0 at day N), and *actual remaining* = `monthBudget − runningTotal(d)`, drawn for
    `date ≤ today` only (none for a future month, all days for a past month). Values may go below zero (overspend). A
    "today" marker, an accessible table alternative, and the same data as the table (no separate calculation).
@@ -279,7 +278,7 @@ Each milestone ends with: build, format check, tests, handover update, then **st
   month's expenses). Counted in tests.
 - One calculator (`OverviewCalculator`, pure) owns budget, daily series, colour data and chart. Response = month meta,
   `budget` (income, installments, computed, effective, overridden), `days[]` (amounts, cumulative budget, running total,
-  per-day remaining, tone green/red/none and alpha values as data), `totals`, `chart` (points day 0..N with `ideal` and
+  per-day remaining, tone green/red/none and alpha values as data), `totals`, `chart` (points day 0..N with `breakEven` and
   `actual`, `actual` null after today; `todayDay` only when today is in the viewed month). Money is rounded to 2
   decimals once at the boundary; colours use the unrounded values. Day-0 `actual` is the budget when the month has
   started (own definition; the spec did not fix it).
@@ -297,6 +296,24 @@ Each milestone ends with: build, format check, tests, handover update, then **st
 - Polished table: today highlight, weekend tint, per-day remaining colouring, sticky header, totals.
 - Loading/empty/error states (including token invalid or Firefly unreachable).
 - Component tests and a Playwright smoke test at 1440 px and 1024 px.
+- Delivered notes: all text goes through `src/lib/format.ts` (nl-BE numbers, English day/month names, no ambient
+  locale). Layout: table left and sticky chart right from `xl` (1280 px), stacked (chart first) below. The override
+  input debounces 400 ms, is sent as an invariant decimal point, is reset when the month changes, and Escape clears
+  it. Keys: ArrowLeft/ArrowRight/Home (ignored while typing in an input). A query error replaces the content with an
+  error panel (token invalid/expired, Firefly unreachable, timeout, generic) with a retry button. The smoke test
+  (`tests/Burndown.BrowserTests`) hosts the real app on Kestrel (`WebApplicationFactory.UseKestrel`) with a fake
+  `IFireflyClient` and a fixed clock (15 Feb 2024), and checks render, no horizontal overflow and keyboard month
+  navigation at 1440 and 1024 px.
+
+- **Follow-ups after review (owner answers recorded):** the dotted line is the **break-even pace**: above it you are
+  saving, below it you are overspending (contract field `ideal` renamed to `breakEven`). The chart data table is taller
+  on desktop. New **year block** above the month: `GET /api/overview/year?month=yyyy-MM` returns the result of every
+  month from January up to, but not including, the viewed month (month result = budget − spent, the `remaining` of the
+  month's last day), the total, and the year (the previous year when January is viewed; the first month is clamped to
+  2023-12, so 2023 shows "No previous data"). Same month validation as the overview. Exactly two parallel Firefly list
+  calls (deposits and withdrawals over the whole span, the calculator filters per month). The client queries it
+  separately, so a failure shows inline in the block and leaves the month overview intact. Open: a reported "server not
+  reachable" when navigating to a future month (see `HANDOVER.md`).
 
 ### M4 – Entry back-end
 

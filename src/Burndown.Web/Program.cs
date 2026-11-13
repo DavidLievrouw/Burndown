@@ -69,6 +69,7 @@ app.UseSerilogRequestLogging(options =>
             ? LogEventLevel.Verbose
             : LogEventLevel.Information
 );
+app.UseMiddleware<RequestAbortedMiddleware>();
 app.UseMiddleware<RequestOriginProtectionMiddleware>((object)(app.Environment.IsDevelopment() ? devClientOrigins : []));
 app.UseDefaultFiles();
 app.UseStaticFiles();

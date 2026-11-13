@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="Shouldly" />
+    <ProjectReference Include="..\..\Burndown.Common\Burndown.Common.csproj" />
+    <ProjectReference Include="..\..\Burndown.Firefly\Burndown.Firefly.csproj" />
+    <ProjectReference Include="..\..\Burndown.Web\Burndown.Web.csproj" />
+  </ItemGroup>
+</Project>
