@@ -12,7 +12,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | M2 Overview back-end | Delivered, awaiting owner review |
 | M3 Overview UI and chart | Delivered, awaiting owner review |
 | M4 Entry back-end | Delivered, awaiting owner review |
-| M5 Entry grid UI | Not started |
+| M5 Entry grid UI | Delivered, awaiting owner review |
 | M6 Browser tests and hardening | Not started |
 | M7 Packaging | Not started |
 | M8 Parity review and removal of old app | Not started |
@@ -137,11 +137,35 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   to `localhost:8042`.
 - Not done on purpose: no UI (M5); description prefill (D16) is not built.
 
-## Next: M5 – Entry grid UI
+### M5 – Entry grid UI (delivered)
 
-Start with the short keyboard/focus design (D20) and show it to the owner before building. The client builds on the
-contract above: load `/api/entry/reference` once, filter accounts client-side, debounce description suggestions, show
-per-row status including `uncertain` (tell the owner to check Firefly), and keep failed/uncertain rows in the grid.
+- Code (`src/Burndown.Client/src/features/entry/`): pure logic (`when`, `amount`, `matching`, `model`, `gridReducer`,
+  `api`), `Combobox`, `GridRow`, `EntryPage`, `ShortcutLegend`; `src/hooks/useDebouncedValue.ts`; `App.tsx` now has the
+  Overview/Entry nav. Overview's `toApiError` is exported and `ErrorPanel` takes a `fallbackTitle`.
+- Shortcut map, layout and the Description-focus deviation: see "M5 as delivered" in `PLAN.md`. All open to feedback.
+- Biome: `biome.json` turns off `a11y/useSemanticElements` and `useFocusableInteractive` for `GridRow.tsx` and
+  `EntryPage.tsx` (ARIA grid on divs).
+- Tests: 153 Vitest tests (incl. 6 page-level keyboard flows with a stubbed `fetch`). 4 new Playwright tests
+  (`EntryBrowserTests`: keyboard-only batch with in-order creation and focus, incomplete row, Tab-accept of a
+  suggestion, no layout shift/overflow at 1440 and 1024 px). Real Chromium confirmed the Tab-accept and Ctrl+Enter
+  flows. Alt/Ctrl+arrow row shortcuts are covered only by Vitest: **try them in your own browser/OS**, since some
+  OS/browser combinations intercept them.
+- **Owner feedback after review:** Ctrl+D duplicates the row (replaces Alt+Shift+↓; `preventDefault` stops the browser
+  bookmark dialog, verified in Chromium); Tab on the last field of the last non-empty row adds a row; an empty row that
+  is not the final one is invalid ("Enter a description."); the "Reload accounts" 415 was fixed (JSON content type).
+  Browser tests: run with `ASPNETCORE_URLS=http://127.0.0.1:0` when a dev instance already holds port 9142.
+- `FakeFireflyClient` now serves asset accounts and suggestions and records created transactions in memory. Checks:
+  `-warnaserror` build, CSharpier, Biome and `tsc` clean; fast .NET suite 317 passed.
+- **Write safety:** only the in-memory fake and a stubbed `fetch` were used; no request went to any Firefly.
+- To try it: `npm run build` in `src/Burndown.Client`, run the host with a token for a throwaway Firefly, open
+  `http://127.0.0.1:9142/#/entry`.
+- Open questions: should Entry be the default landing page? Is Description the right first focus? Are the shortcuts OK?
+
+## Next: M6 – Browser tests and hardening
+
+Extend the Playwright suite (mixed types, partial failure and uncertain rows with a scripted fake, throwaway Firefly),
+then error UX (token expired, Firefly down), an accessibility pass, and a logging/round-trip review. Adjust M5 on the
+owner's feedback first.
 
 ## Environment facts
 

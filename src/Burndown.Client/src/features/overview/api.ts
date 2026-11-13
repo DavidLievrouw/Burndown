@@ -86,7 +86,7 @@ interface ProblemBody {
   errors?: unknown;
 }
 
-async function toApiError(response: Response): Promise<ApiError> {
+export async function toApiError(response: Response): Promise<ApiError> {
   let body: ProblemBody = {};
   try {
     body = (await response.json()) as ProblemBody;

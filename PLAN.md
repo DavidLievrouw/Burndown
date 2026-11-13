@@ -377,6 +377,28 @@ Each milestone ends with: build, format check, tests, handover update, then **st
 - Client-side filtering of accounts from the loaded list; debounced, cancellable description suggestions.
 - Hooks for keyboard handling covered by Vitest; the full flows by Playwright (M6).
 
+**M5 as delivered (built directly on the owner's request, without a separate design round; layout and shortcuts are open
+to feedback, D20):**
+
+- Hash-routed top navigation (`#/` Overview, `#/entry` Entry). Entry mounts on first visit and then stays mounted, so
+  typed rows survive a peek at Overview. Overview unmounts when inactive (its month keys must not fire in Entry), so its
+  selected month resets when the owner returns.
+- ARIA grid, one `rowgroup` per entry: a field line plus a fixed-height status line (errors never shift the layout).
+  Cells that do not apply to the row type show "—" and are skipped by Tab.
+- Keys: Tab/Shift+Tab and Enter move between fields; Enter on the last field goes to the next row's Description or adds a
+  row; Tab on the last field of the last (non-empty) row also adds a row; Ctrl+Enter submits; Alt+↑/↓ moves the row,
+  Ctrl+D duplicates, Alt+Delete deletes; Ctrl+↑/↓ goes to the same
+  field in the row above/below; Esc closes the list or undoes the typed text. Type: `e`/`i`/`t` then Tab.
+- **Deviation from AGENTS ("first field of the new row"):** a new row gets focus in **Description**, not Type, because
+  Type and When are sticky and normally unchanged.
+- When shows `dd/MM/yyyy HH:mm` and parses forgiving short forms (`5`, `5/3`, `14:30`, `5/3 14:30`). Amount accepts `,` or
+  `.` and normalizes to `12,50`.
+- Description suggestions: debounced 250 ms, at least 2 characters, cancelled when stale, filtered client-side.
+- Submit validates every row client-side first and sends nothing if any is invalid. Only the empty row at the very end
+  of the list is ignored; any other row without a description is invalid. Created rows lock and are never
+  resent; `uncertain` rows are excluded until the owner chooses "Treat as not sent". The reference data is not
+  invalidated after a submit; "Reload accounts" refreshes it.
+
 ### M6 – Browser tests and hardening
 
 - Playwright (real HTTP listener, throwaway Firefly): keyboard-only batches of mixed types, partial failure,

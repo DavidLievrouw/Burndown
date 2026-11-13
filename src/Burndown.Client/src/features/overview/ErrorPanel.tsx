@@ -6,7 +6,7 @@ interface Described {
 }
 
 /** Maps a failure to a user-readable explanation; the server's `detail` is shown underneath. */
-export function describeError(error: unknown): Described {
+export function describeError(error: unknown, fallbackTitle = "The overview could not be loaded"): Described {
   const code = error instanceof ApiError ? error.code : "unknown";
   switch (code) {
     case "firefly.unauthorized":
@@ -25,15 +25,20 @@ export function describeError(error: unknown): Described {
     case "network":
       return { title: "The Burndown server is not reachable", hint: "Check that the Burndown container is running." };
     default:
-      return {
-        title: "The overview could not be loaded",
-        hint: "Try again. If it keeps failing, check the server logs.",
-      };
+      return { title: fallbackTitle, hint: "Try again. If it keeps failing, check the server logs." };
   }
 }
 
-export function ErrorPanel({ error, onRetry }: { error: unknown; onRetry: () => void }) {
-  const { title, hint } = describeError(error);
+export function ErrorPanel({
+  error,
+  onRetry,
+  fallbackTitle,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  fallbackTitle?: string;
+}) {
+  const { title, hint } = describeError(error, fallbackTitle);
   const detail = error instanceof Error ? error.message : null;
   return (
     <div role="alert" className="rounded-lg border border-bad/50 bg-bad/10 p-6">

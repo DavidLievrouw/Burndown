@@ -23,6 +23,9 @@ public sealed class BrowserFixture : IAsyncLifetime
 
     public string BaseUrl { get; private set; } = string.Empty;
 
+    /// <summary>The in-memory Firefly the host talks to; shared by all browser tests.</summary>
+    internal FakeFireflyClient Firefly { get; } = new(SyntheticData.Transactions);
+
     public IBrowser Browser { get; private set; } = null!;
 
     public async ValueTask InitializeAsync()
@@ -43,7 +46,7 @@ public sealed class BrowserFixture : IAsyncLifetime
                 .ConfigureServices(services =>
                 {
                     services.RemoveAll<IFireflyClient>();
-                    services.AddSingleton<IFireflyClient>(new FakeFireflyClient(SyntheticData.Transactions));
+                    services.AddSingleton<IFireflyClient>(Firefly);
                     services.RemoveAll<TimeProvider>();
                     services.AddSingleton<TimeProvider>(new FakeTimeProvider(SyntheticData.Now));
                 })
