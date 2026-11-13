@@ -1,5 +1,6 @@
 using System.Reflection;
 using Burndown.Common;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
@@ -22,6 +23,13 @@ public static class EntryModule
         services.AddSingleton<IValidateOptions<EntryOptions>, EntryOptionsValidator>();
         services.AddOptions<EntryOptions>().BindConfiguration(EntryOptions.Section).ValidateOnStart();
 
+        services.AddSingleton<EntryUsageTracker>();
+        services.AddSingleton<AssetAccountCache>();
+        services.AddScoped<EntryReferenceService>();
+        services.AddScoped<DescriptionSuggestionService>();
+        services.AddScoped<EntryRowValidator>();
+        services.AddScoped<EntrySubmitService>();
+
         services.Configure<HealthCheckServiceOptions>(options =>
             options.Registrations.Add(
                 new HealthCheckRegistration(
@@ -35,4 +43,8 @@ public static class EntryModule
 
         return services;
     }
+
+    /// <summary>Maps the Entry endpoints.</summary>
+    /// <param name="routes">The route builder, normally the <c>/api</c> group.</param>
+    public static void MapEntryEndpoints(this IEndpointRouteBuilder routes) => EntryEndpoints.Map(routes);
 }

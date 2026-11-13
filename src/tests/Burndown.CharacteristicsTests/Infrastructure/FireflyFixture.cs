@@ -40,6 +40,7 @@ public sealed partial class FireflyFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        ThrowawayGuard.EnsureNoEnvironmentOverrides();
         var script = await File.ReadAllBytesAsync(
             Path.Combine(AppContext.BaseDirectory, "Infrastructure", "bootstrap.php")
         );
@@ -61,6 +62,7 @@ public sealed partial class FireflyFixture : IAsyncLifetime
         await _container.StartAsync();
 
         BaseUrl = $"http://{_container.Hostname}:{_container.GetMappedPublicPort(ContainerPort)}";
+        ThrowawayGuard.Ensure(BaseUrl);
         Token = await CreateTokenAsync(_container);
 
         _seedHttp = new HttpClient { BaseAddress = new Uri(BaseUrl + "/api/v1/") };
@@ -84,6 +86,7 @@ public sealed partial class FireflyFixture : IAsyncLifetime
     /// <returns>A client for the container.</returns>
     internal FireflyClient CreateClient(int pageSize = 2, string? token = null)
     {
+        ThrowawayGuard.Ensure(BaseUrl);
         var http = new HttpClient { BaseAddress = new Uri(BaseUrl + "/api/v1/") };
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token ?? Token);
         http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

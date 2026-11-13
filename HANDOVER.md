@@ -11,7 +11,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | M1 Firefly client and test infrastructure | Delivered, awaiting owner review |
 | M2 Overview back-end | Delivered, awaiting owner review |
 | M3 Overview UI and chart | Delivered, awaiting owner review |
-| M4 Entry back-end | Not started |
+| M4 Entry back-end | Delivered, awaiting owner review |
 | M5 Entry grid UI | Not started |
 | M6 Browser tests and hardening | Not started |
 | M7 Packaging | Not started |
@@ -119,11 +119,29 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 - **Fixed (owner report):** stepping through months quickly logged 500s with `TaskCanceledException`. TanStack Query aborts the superseded browser request, which cancels the in-flight Firefly calls; the cancellation escaped as an unhandled exception. New `RequestAbortedMiddleware` (before origin protection) turns a cancellation of an aborted request into status 499 without an exception; cancellations of live requests and other exceptions still propagate. 3 unit tests. The earlier "server not reachable" report was withdrawn by the owner.
 - Not done on purpose: no Entry UI (M5); full browser flows against a throwaway Firefly are M6.
 
-## Next: M4 – Entry back-end
+### M4 – Entry back-end (delivered)
 
-See `PLAN.md`. Reference data endpoint (cached with TTL and refresh, ranked by an in-memory last-use tracker), description
-suggestions, batch submit with per-row results and field-error mapping, timestamp sequencing, all in `Burndown.Entry`;
-cover with unit tests and container characteristics tests. No open owner questions.
+- Code (`src/Burndown.Entry`): `EntryContract`, `EntryReferenceService` (+ `EntryDates`), `AssetAccountCache`,
+  `EntryUsageTracker`, `DescriptionSuggestionService`, `EntryRowValidator`, `TimestampSequencer`, `EntrySubmitService`,
+  `EntryEndpoints`; registered in `EntryModule`, mapped in `Program.cs`. The endpoint and status contract is in the
+  "M4 as delivered" part of `PLAN.md`.
+- Tests: 104 new fast tests (validator, sequencer incl. DST, submit service, cache TTL/refresh/failure, usage tracker,
+  reference and suggestion services, endpoints incl. Origin and content-type refusal) and 3 new characteristics tests
+  plus a plain `ThrowawayGuard` test class. Checks: `-warnaserror` build, XML-doc build (no new warnings), CSharpier
+  check clean; fast suite 312 passed; characteristics 25 passed.
+- **Write safety (PLAN.md "Write safety") – which layer wrote where:** unit, endpoint and architecture tests used the
+  in-process `RecordingFireflyClient`, no network. Characteristics tests wrote only to the Testcontainers throwaway
+  Firefly (random local port; `ThrowawayGuard` refuses port 8042 and non-local hosts, and the fixture refuses
+  `Firefly__*` environment overrides; both verified at run time, the environment variables were empty). The browser
+  tests use a fake client and were not changed. The agent did not start the host with a real token and sent no request
+  to `localhost:8042`.
+- Not done on purpose: no UI (M5); description prefill (D16) is not built.
+
+## Next: M5 – Entry grid UI
+
+Start with the short keyboard/focus design (D20) and show it to the owner before building. The client builds on the
+contract above: load `/api/entry/reference` once, filter accounts client-side, debounce description suggestions, show
+per-row status including `uncertain` (tell the owner to check Firefly), and keep failed/uncertain rows in the grid.
 
 ## Environment facts
 

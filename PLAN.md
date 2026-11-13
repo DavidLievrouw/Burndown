@@ -54,6 +54,31 @@ Pending decisions (resolve in the named milestone, then record here):
   reserved combinations). There is no paste support (D21).
 - **Version info** (M7): `version.txt` or `version.props`.
 
+## Write safety (binding from M4, the first milestone that writes to Firefly)
+
+The Firefly at `localhost:8042` holds the owner's real data (D11). M4 adds the first code that creates transactions, so
+these rules apply to every test, probe and manual run by the agent:
+
+1. **Test layers and what they may touch.**
+   - Unit, endpoint and architecture tests use a fake `IFireflyClient`/stub `HttpMessageHandler`. They make no network
+     call at all.
+   - Characteristics tests write **only** to the Testcontainers throwaway Firefly (random port, synthetic data, destroyed
+     afterwards). No other Firefly is ever configured in a test.
+   - Browser tests (M6) use the fake client or the throwaway Firefly, never the real one.
+2. **Hard guard in the fixture.** `FireflyFixture` is the only place a test obtains a base URL and token; it uses the
+   container's mapped endpoint. A test-assembly guard fails the run if a configured base URL has port `8042` or points
+   at a non-container host, and `FireflyFixture` refuses an `FIREFLY_*`/`Firefly__*` environment override (environment
+   variables beat user-secrets, so test hosts always set `Firefly:BaseUrl`/`Firefly:Token` explicitly).
+3. **Test hosts never inherit the developer's configuration.** `WebApplicationFactory`-based tests replace
+   `IFireflyClient` (or set explicit container settings) and clear the Firefly user-secrets/environment values, so a
+   forgotten user-secret token can never be used.
+4. **No manual write runs.** The agent never starts the host with the owner's real token, and never sends POST, PUT,
+   PATCH or DELETE to `localhost:8042` (not even to "check" something). A manual or exploratory run of the Entry
+   endpoints uses the throwaway container (a compose profile on another port, or the characteristics fixture) only.
+5. **Read-only exploration of the real Firefly** only on the owner's explicit request, and never during M4 tests.
+6. **Verification.** At the end of M4 the agent states in the handover which layers wrote where (expected: fake client
+   only, plus the throwaway container) and checks `git status`/test output for any use of port 8042.
+
 ## Open questions for the owner
 
 None open. (Q1–Q3 were answered and recorded as D12, D15 and D21.) Add new questions here, ask the owner, then record
@@ -325,6 +350,23 @@ Each milestone ends with: build, format check, tests, handover update, then **st
 - Sequential submit with per-row results; never resend a succeeded row; 422 to field errors.
 - Characteristics tests against the throwaway Firefly: created transactions have the right type, accounts, category,
   tag, budget, ordering, `apply_rules` and `fire_webhooks`.
+
+**M4 as delivered (contract the M5 client builds on; all under `/api`, JSON camelCase):**
+- `GET /entry/reference` and `POST /entry/reference/refresh`: `now`, `today`, `timeZone`, `minDate`, `maxDate`,
+  `maxBatchSize` (100), `accounts` (`{id,name}`, active Asset accounts, last-used first), `categories`, `targetTags`,
+  `budgets` (`{id,name}`, configured; last-used first). Only the account list is cached (5 minutes, single-flight, failures never
+  cached); `refresh` reloads it.
+- `GET /entry/suggest/descriptions?q=`: returns `{ descriptions: [...] }`; blank query returns an empty list without a Firefly call; over 200 characters is
+  a 400 on field `q`.
+- `POST /entry/submit` with `{ rows: [...] }` (1–100 rows, otherwise 400 on field `rows`). Always 200 with per-row
+  `results` plus `summary` and `stopped`. Row status: `created` (with `id`), `invalid` (own validation, never sent),
+  `rejected` (Firefly 422 mapped to the row's field names; the batch continues), `failed` (401/403/5xx/unexpected; the
+  batch stops), `uncertain` (timeout or unreadable answer; the batch stops and the row may or may not exist in Firefly,
+  so the UI must tell the owner to check Firefly before retrying), `notAttempted` (after a stop). Rows are validated and
+  time-sequenced first; invalid rows do not take part in the sequence. `bumped` and `dateTime` report the effective
+  time. Nothing is ever resent automatically. `apply_rules`/`fire_webhooks` are set by the Firefly client; they cannot be
+  read back, so no test asserts them.
+- A bump that rolls into the next day or lands in a DST gap makes that row `invalid` on field `dateTime`.
 
 ### M5 – Entry grid UI (primary deliverable)
 
