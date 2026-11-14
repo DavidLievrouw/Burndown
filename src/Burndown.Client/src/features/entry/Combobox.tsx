@@ -129,7 +129,10 @@ export function SelectCombobox(props: SelectProps) {
   const [draft, setDraft] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-
+  // Whether the user moved through the list with the arrow keys since the text last changed.
+  const [navigated, setNavigated] = useState(false);
+  // Set when an option was just accepted, so the blur that follows does not resolve the stale typed text again.
+  const acceptedRef = useRef(false);
   const selectedLabel = items.find((item) => item.key === value)?.label ?? "";
   const options = open ? filterItems(items, draft ?? "") : [];
   const showing = open && options.length > 0;
@@ -139,8 +142,10 @@ export function SelectCombobox(props: SelectProps) {
     if (option) {
       onSelect(option.key);
     }
+    acceptedRef.current = true;
     setDraft(null);
     setOpen(false);
+    setNavigated(false);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -151,6 +156,7 @@ export function SelectCombobox(props: SelectProps) {
       case "ArrowDown":
       case "ArrowUp": {
         event.preventDefault();
+        setNavigated(true);
         if (!open) {
           setOpen(true);
           setHighlight(0);
@@ -163,6 +169,11 @@ export function SelectCombobox(props: SelectProps) {
         return;
       }
       case "Enter": {
+        if (showing && navigated) {
+          // Accepts the option the user moved to, then lets the grid move on.
+          accept(highlight);
+          return;
+        }
         if (draft !== null && draft.trim() === "") {
           if (allowEmpty) {
             onSelect(null);
@@ -183,7 +194,8 @@ export function SelectCombobox(props: SelectProps) {
         return;
       }
       case "Tab": {
-        if (draft !== null && showing) {
+        // An emptied box only accepts a highlighted option the user actively moved to; otherwise it is left as is.
+        if (showing && (navigated || (draft !== null && draft.trim() !== ""))) {
           accept(highlight);
         }
         return;
@@ -194,6 +206,7 @@ export function SelectCombobox(props: SelectProps) {
           event.stopPropagation();
           setDraft(null);
           setOpen(false);
+          setNavigated(false);
         }
         return;
       }
@@ -201,7 +214,9 @@ export function SelectCombobox(props: SelectProps) {
   };
 
   const onBlur = () => {
-    if (draft !== null) {
+    const accepted = acceptedRef.current;
+    acceptedRef.current = false;
+    if (draft !== null && !accepted) {
       const typed = normalize(draft.trim());
       if (typed === "") {
         if (allowEmpty) {
@@ -216,6 +231,7 @@ export function SelectCombobox(props: SelectProps) {
     }
     setDraft(null);
     setOpen(false);
+    setNavigated(false);
     onFocusChange?.(false);
   };
 
@@ -241,13 +257,16 @@ export function SelectCombobox(props: SelectProps) {
         className={inputClass(invalid)}
         value={draft ?? selectedLabel}
         onFocus={(event) => {
+          acceptedRef.current = false;
           event.currentTarget.select();
           onFocusChange?.(true);
         }}
         onChange={(event) => {
+          acceptedRef.current = false;
           setDraft(event.target.value);
           setOpen(true);
           setHighlight(0);
+          setNavigated(false);
         }}
         onKeyDown={onKeyDown}
         onBlur={onBlur}

@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReferenceData, SubmitResponse } from "./api";
+import type { ReferenceData, RowResult, SubmitResponse } from "./api";
 import { EntryPage } from "./EntryPage";
 
 const reference: ReferenceData = {
@@ -53,10 +53,13 @@ function renderPage() {
 
 describe("EntryPage", () => {
   let submitted: unknown[];
+  let requests: { rows: unknown[]; previous: string[] }[];
   let submitResponse: (rows: unknown[]) => Response;
 
   beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
     submitted = [];
+    requests = [];
     submitResponse = (rows) => json(createdResponse(rows.length));
     vi.stubGlobal(
       "fetch",
@@ -68,7 +71,8 @@ describe("EntryPage", () => {
           return json({ descriptions: [] });
         }
         if (url === "/api/entry/submit") {
-          const body = JSON.parse(String(init?.body)) as { rows: unknown[] };
+          const body = JSON.parse(String(init?.body)) as { rows: unknown[]; previous?: string[] };
+          requests.push({ rows: body.rows, previous: body.previous ?? [] });
           submitted.push(...body.rows);
           return submitResponse(body.rows);
         }
@@ -102,11 +106,10 @@ describe("EntryPage", () => {
     await user.keyboard("shared{Enter}"); // target
     await user.keyboard("{Enter}"); // budget (optional) → next row
 
-    const descriptions = screen.getAllByRole("combobox", { name: "Description" });
-    expect(descriptions).toHaveLength(2);
-    expect(descriptions[1]).toHaveFocus();
+    expect(screen.getAllByRole("combobox", { name: "Description" })).toHaveLength(2);
+    expect(screen.getAllByRole("textbox", { name: "When" })[1]).toHaveFocus();
 
-    await user.keyboard("Butcher{Enter}7.5{Enter}");
+    await user.keyboard("{Enter}Butcher{Enter}7.5{Enter}");
     await user.keyboard("{Control>}{Enter}{/Control}");
 
     await waitFor(() => expect(submitted).toHaveLength(2));
@@ -128,9 +131,8 @@ describe("EntryPage", () => {
     expect(await screen.findByText(/2 created in Firefly III/)).toBeInTheDocument();
     const rows = screen.getAllByRole("rowgroup").filter((group) => group.hasAttribute("data-status"));
     expect(rows.filter((group) => group.getAttribute("data-status") === "created")).toHaveLength(2);
-    const blank = screen.getAllByRole("combobox", { name: "Description" }).at(-1);
-    expect(blank).toHaveFocus();
-    expect(blank).toHaveValue("");
+    expect(screen.getAllByRole("textbox", { name: "When" }).at(-1)).toHaveFocus();
+    expect(screen.getAllByRole("combobox", { name: "Description" }).at(-1)).toHaveValue("");
   });
 
   it("adds a row when Tab leaves the last field of the last row", async () => {
@@ -143,9 +145,8 @@ describe("EntryPage", () => {
 
     await user.keyboard("{Tab}"); // budget, the last field
 
-    const descriptions = screen.getAllByRole("combobox", { name: "Description" });
-    expect(descriptions).toHaveLength(2);
-    expect(descriptions[1]).toHaveFocus();
+    expect(screen.getAllByRole("combobox", { name: "Description" })).toHaveLength(2);
+    expect(screen.getAllByRole("textbox", { name: "When" })[1]).toHaveFocus();
   });
 
   it("keeps the focus in an empty last row when Tab leaves its last field", async () => {
@@ -157,9 +158,8 @@ describe("EntryPage", () => {
       await user.keyboard("{Tab}");
     }
 
-    const descriptions = screen.getAllByRole("combobox", { name: "Description" });
-    expect(descriptions).toHaveLength(1);
-    expect(descriptions[0]).toHaveFocus();
+    expect(screen.getAllByRole("combobox", { name: "Description" })).toHaveLength(1);
+    expect(screen.getByRole("textbox", { name: "When" })).toHaveFocus();
   });
 
   it("duplicates the row with Ctrl+D and keeps the focus in the copy", async () => {
@@ -174,7 +174,38 @@ describe("EntryPage", () => {
     expect(descriptions).toHaveLength(2);
     expect(descriptions[0]).toHaveValue("Bakery");
     expect(descriptions[1]).toHaveValue("Bakery");
-    expect(descriptions[1]).toHaveFocus();
+    expect(screen.getAllByRole("textbox", { name: "When" })[1]).toHaveFocus();
+  });
+
+  it("selects the highlighted category with Enter after clearing the box and arrowing down", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const first = await screen.findByRole("combobox", { name: "Description" });
+    await user.type(first, "Bakery");
+    await user.keyboard("{Enter}12,50{Enter}che{Tab}leven{Tab}{Shift>}{Tab}{/Shift}");
+    const category = screen.getByRole("combobox", { name: "Category" });
+    expect(category).toHaveFocus();
+    expect(category).toHaveValue("Leven");
+
+    await user.keyboard("{Backspace}{ArrowDown}{Enter}");
+
+    expect(category).toHaveValue("Nodig");
+    expect(screen.getByRole("combobox", { name: "Target" })).toHaveFocus();
+  });
+
+  it("edits the date and time one part at a time", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const when = await screen.findByRole("textbox", { name: "When" });
+    act(() => when.focus());
+
+    await user.keyboard("7"); // day, moves on to the month
+    await user.keyboard("{ArrowDown}"); // month 03 -> 02
+    expect(when).toHaveValue("07/02/2026 14:40");
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowUp}"); // year, hour -> 15
+    expect(when).toHaveValue("07/02/2026 15:40");
+    await user.keyboard("{ArrowRight}3{ArrowLeft}{ArrowLeft}{ArrowLeft}{ArrowLeft}2");
+    expect(when).toHaveValue("02/02/2026 15:03");
   });
 
   it("treats an empty row before the last one as invalid", async () => {
@@ -272,7 +303,60 @@ describe("EntryPage", () => {
     await user.keyboard("{Enter}5{Enter}che{Tab}leven{Tab}shared{Tab}");
     await user.keyboard("{Control>}{Enter}{/Control}");
 
-    expect(await screen.findByText(/some rows may already have been created/)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Description" })).toHaveValue("Bakery");
+    expect(await screen.findByText(/the last row may already have been created/)).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Bakery")).toBeInTheDocument();
+  });
+
+  it("posts one request per row, in order, and carries the placed times forward", async () => {
+    submitResponse = (rows) => {
+      const response = createdResponse(rows.length);
+      const row = rows[0] as { dateTime: string };
+      response.results[0] = { ...response.results[0], dateTime: row.dateTime } as RowResult;
+      return json(response);
+    };
+    const user = userEvent.setup();
+    renderPage();
+    const first = await screen.findByRole("combobox", { name: "Description" });
+    await user.type(first, "Bakery");
+    await user.keyboard("{Enter}12,50{Enter}che{Tab}leven{Tab}shared{Enter}");
+    await user.keyboard("{Enter}{Enter}Butcher{Enter}7.5{Enter}");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+
+    expect(await screen.findByText(/2 created in Firefly III/)).toBeInTheDocument();
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.rows.map((row) => (row as { description: string }).description)).toEqual(["Bakery"]);
+    expect(requests[0]?.previous).toEqual([]);
+    expect(requests[1]?.rows.map((row) => (row as { description: string }).description)).toEqual(["Butcher"]);
+    expect(requests[1]?.previous).toEqual(["2026-03-05T14:40"]);
+  });
+
+  it("stops after an unconfirmed row and leaves the remaining rows unsent", async () => {
+    submitResponse = () =>
+      json({
+        results: [
+          {
+            index: 0,
+            status: "uncertain",
+            id: null,
+            dateTime: null,
+            bumped: false,
+            code: "firefly.timeout",
+            message: "Firefly III did not answer in time.",
+            errors: null,
+          },
+        ],
+        summary: { created: 0, invalid: 0, rejected: 0, failed: 0, uncertain: 1, notAttempted: 0 },
+        stopped: { atRow: 0, code: "firefly.timeout", message: "Firefly III did not answer in time." },
+      });
+    const user = userEvent.setup();
+    renderPage();
+    const first = await screen.findByRole("combobox", { name: "Description" });
+    await user.type(first, "Bakery");
+    await user.keyboard("{Enter}12,50{Enter}che{Tab}leven{Tab}shared{Enter}");
+    await user.keyboard("{Enter}{Enter}Butcher{Enter}7.5{Enter}");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+
+    expect(await screen.findByText(/1 unconfirmed, 1 not sent/)).toBeInTheDocument();
+    expect(requests).toHaveLength(1);
   });
 });

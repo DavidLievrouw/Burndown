@@ -27,9 +27,10 @@ export function ShortcutLegend() {
       </dl>
       <p className="mt-3 text-xs text-muted">
         Type: <kbd className="font-mono">e</kbd>, <kbd className="font-mono">i</kbd> or{" "}
-        <kbd className="font-mono">t</kbd> then Tab. Amounts accept a comma or a point. Date and time accept{" "}
-        <kbd className="font-mono">5</kbd>, <kbd className="font-mono">5/3</kbd>, <kbd className="font-mono">14:30</kbd>{" "}
-        or <kbd className="font-mono">5/3 14:30</kbd>.
+        <kbd className="font-mono">t</kbd> then Tab. Amounts accept a comma or a point. In the date and time, the day is
+        selected first: type digits to replace a part (it moves on by itself), <kbd className="font-mono">←</kbd>{" "}
+        <kbd className="font-mono">→</kbd> pick another part and <kbd className="font-mono">↑</kbd>{" "}
+        <kbd className="font-mono">↓</kbd> change it.
       </p>
     </section>
   );

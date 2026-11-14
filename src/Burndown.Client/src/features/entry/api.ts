@@ -110,10 +110,10 @@ export async function fetchDescriptionSuggestions(query: string, signal: AbortSi
   return body.descriptions;
 }
 
-export function submitRows(rows: SubmitRow[]): Promise<SubmitResponse> {
+export function submitRows(rows: SubmitRow[], previous: string[] = []): Promise<SubmitResponse> {
   return request<SubmitResponse>("/api/entry/submit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rows }),
+    body: JSON.stringify({ rows, previous }),
   });
 }

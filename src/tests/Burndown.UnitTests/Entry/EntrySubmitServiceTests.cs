@@ -65,6 +65,30 @@ public class EntrySubmitServiceTests
     }
 
     [Fact]
+    public async Task Continues_the_time_sequence_after_the_previous_times_of_earlier_requests()
+    {
+        var result = await Create()
+            .SubmitAsync(
+                new SubmitRequest([Expense(dateTime: "2026-05-15T09:30")], ["2026-05-15T09:30", "2026-05-14T22:00"]),
+                TestContext.Current.CancellationToken
+            );
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.Results[0].Bumped.ShouldBeTrue();
+        result.Value.Results[0].DateTime.ShouldBe("2026-05-15T09:31");
+    }
+
+    [Fact]
+    public async Task Rejects_a_previous_time_that_is_not_formatted_as_a_local_date_time()
+    {
+        var result = await Create()
+            .SubmitAsync(new SubmitRequest([Expense()], ["yesterday"]), TestContext.Current.CancellationToken);
+
+        result.IsSuccess.ShouldBeFalse();
+        _firefly.Created.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Bumps_rows_on_the_same_date_and_reports_the_effective_time()
     {
         var response = await SubmitAsync(Expense(dateTime: "2026-05-15T09:30"), Expense(dateTime: "2026-05-15T09:30"));

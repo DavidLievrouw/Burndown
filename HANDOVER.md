@@ -159,7 +159,46 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 - **Write safety:** only the in-memory fake and a stubbed `fetch` were used; no request went to any Firefly.
 - To try it: `npm run build` in `src/Burndown.Client`, run the host with a token for a throwaway Firefly, open
   `http://127.0.0.1:9142/#/entry`.
-- Open questions: should Entry be the default landing page? Is Description the right first focus? Are the shortcuts OK?
+- **Second feedback round:** (1) When is now a segmented date-time picker (`whenSegments.ts` pure logic, `WhenInput` in
+  `GridRow.tsx`; see PLAN "M5 as delivered"). (2) Category (and every select combobox): after Backspace-clearing or
+  opening with the arrows, ArrowDown/Up then Enter accepts the highlighted option and moves on; Tab on an emptied,
+  un-navigated box no longer silently picks the first item. Tests: 187 Vitest, 11 Playwright (new: date parts with real
+  caret selection, Category Enter after clearing). Biome, `tsc`, build clean.
+- **Reminder:** the dev debug session points at the **live** Firefly; Ctrl+Enter in Entry creates real transactions.
+  Use a throwaway Firefly (`Firefly__BaseUrl`/`Firefly__Token`) for manual submits. Still unanswered: do you want that
+  override documented as a compose profile?
+- **Third feedback round (row-by-row submit):** after the stale-saldo investigation (Learnings) the client now posts one
+  row per request with progress ("Submitting X of N…", `<progress>`, inert grid), like the legacy app. Server:
+  `SubmitRequest.Previous` + `TimestampSequencer.Seed` keep the strictly increasing times across requests. Stops
+  (`failed`/`uncertain`/network) leave the remaining rows as not sent. Details: PLAN "M5 as delivered". Tests: 189 Vitest,
+  new unit tests for `Seed`/`Previous`, 11 Playwright and 25 characteristics tests green. **Limit:** Firefly's queued
+  recalculation cannot be observed, so this does not guarantee a correct saldo; the durable fix is Firefly-side (sync
+  queue, a single worker, or `firefly-iii:recalculate-running-balance`, the last one untested).
+- **Owner answers:** the read-only check of the live Firefly was allowed; Entry is not the default page; the first
+  focus is the **Day part of When** (implemented: new/duplicate/post-submit rows focus When; Vitest 189 and 11
+  Playwright green); no compose profile for a throwaway Firefly.
+- **Live Firefly finding (read-only, container env only):** `QUEUE_DRIVER=sync`, no queue worker or cron process, so
+  the async-queue hypothesis does **not** apply to the live instance; the stale-saldo cause is still unknown
+  (candidates: rules/webhooks touching the transaction after creation, or pre-existing dirty `balance_after` rows).
+  Checking those needs DB reads: ask first.
+- **Disclosure:** my `docker inspect` env dump printed Firefly's `STATIC_CRON_TOKEN` into tool output (not stored in a
+  file); consider rotating it.
+- **Owner answers (round 2):** read-only DB check of the live Firefly allowed; all keyboard shortcuts now work for the
+  owner (no rebinding needed).
+- **Live DB check (SELECT only, read-only session):** 10,510 transactions, 0 with `balance_dirty`, 0 NULL
+  `balance_before/after`, per-row arithmetic is correct. 12 active rules, 0 webhooks. The `balance_before` →
+  previous `balance_after` chain (ordered by date, order, id) has historical breaks in many accounts (KBC zichtrekening
+  David 22, Tina 22, Cash account 75, ...), none newer than 2026-01-05 for the KBC accounts. In the broken rows
+  `balance_before = 0` and `balance_after = amount`, as if the row were first in the account. So the stale saldo is
+  stored data (not a display issue) and has nothing to do with Burndown's payload; a repair (opening and saving the
+  transaction, or Firefly's recalculation command) is a write on live data and needs the owner's explicit go-ahead.
+  Hypothesis, unproven: rules (`apply_rules: true`) updating the journal right after creation trigger recalculations
+  that race.
+- **Owner decision:** do not modify the live Firefly data (no recalculation command, no repair). Not to be proposed
+  again; any further stale-saldo investigation stays on the throwaway Firefly.
+- **Result in practice (owner, 2026-11-14):** after the row-by-row submit, a batch of transactions in KBC Mastercard
+  Gold left the balance correct. So sequential posting avoids the stale saldo on the live instance, even though the
+  mechanism (rules racing the recalculation, most likely) is unproven. Older broken rows stay as they are.
 
 ## Next: M6 – Browser tests and hardening
 
@@ -179,6 +218,17 @@ owner's feedback first.
   stage or copy it). `src/Burndown.sln` now includes the new projects (uncommitted).
 
 ## Learnings
+
+- Stale account balance after a batch (investigated, not reproduced with defaults). Firefly keeps per-row
+  `balance_before/after/dirty` and recalculates them in the `ProcessesNewTransactionGroup` listener, which is a queued
+  listener. Throwaway Firefly 6.6.6 experiments (7 backdated posts incl. near-midnight, legacy naive-date payload versus
+  the new offset payload, TZ UTC and Europe/Brussels): with `QUEUE_CONNECTION=sync` both payloads leave correct
+  balances, so payload shape is not the cause. With an async queue the balance columns stay `NULL/dirty=1` until a
+  worker runs; one worker fixes them, several concurrent workers (SQLite) left some rows stale. A UI save fires the
+  update event, which recalculates (hence the "open, save, close" fix). Likely cause on the live instance: its queue
+  or worker setup (not checked: the live Firefly is off limits); a rapid batch makes that race more likely than the
+  legacy app's one-at-a-time posts. Workaround: `php artisan firefly-iii:recalculate-running-balance` in the Firefly
+  container. The experiment code was removed again (not a regression test).
 
 - M0: `dotnet test --nologo` silently runs zero tests in MTP mode (exit code 5); omit the flag. Run a built host from
   its output folder. The Vite build output in `wwwroot` is picked up by the Development static-web-assets manifest, so

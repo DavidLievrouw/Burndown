@@ -59,8 +59,27 @@ internal sealed partial class EntrySubmitService
             return BatchFailure($"A batch can have at most {MaxBatchSize} rows.");
         }
 
+        var previous = new List<DateTime>();
+        foreach (var text in request.Previous ?? [])
+        {
+            if (
+                !DateTime.TryParseExact(
+                    text,
+                    EntryRowValidator.DateTimeFormat,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var time
+                )
+            )
+            {
+                return BatchFailure($"A previous time must be formatted as {EntryRowValidator.DateTimeFormat}.");
+            }
+
+            previous.Add(time);
+        }
+
         var results = new RowResult?[rows.Count];
-        var pending = Prepare(rows, results);
+        var pending = Prepare(rows, previous, results);
 
         BatchStop? stopped = null;
         foreach (var item in pending)
@@ -104,10 +123,15 @@ internal sealed partial class EntrySubmitService
         return Result<SubmitResponse>.Success(new SubmitResponse(final, summary, stopped));
     }
 
-    private List<PendingRow> Prepare(IReadOnlyList<SubmitRow> rows, RowResult?[] results)
+    private List<PendingRow> Prepare(IReadOnlyList<SubmitRow> rows, List<DateTime> previous, RowResult?[] results)
     {
         var today = _clock.Today;
         var sequencer = new TimestampSequencer(_clock.Zone);
+        foreach (var time in previous)
+        {
+            sequencer.Seed(time);
+        }
+
         var pending = new List<PendingRow>(rows.Count);
         for (var index = 0; index < rows.Count; index++)
         {

@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ClipboardEvent, type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { formatAmountInput, parseAmount } from "./amount";
 import { fetchDescriptionSuggestions, type ReferenceData, type RowType } from "./api";
@@ -13,7 +13,17 @@ import {
   type UiField,
   visibleErrors,
 } from "./model";
-import { formatWhen, parseWhenInput } from "./when";
+import { parseWhenInput } from "./when";
+import {
+  displayWhen,
+  finishSegment,
+  neighbourSegment,
+  SEGMENT_RANGES,
+  type Segment,
+  segmentAt,
+  stepSegment,
+  typeDigit,
+} from "./whenSegments";
 
 /** The grid columns: #, type, when, description, amount, account, category/to, target, budget. */
 export const GRID_COLUMNS = "24px 88px 144px minmax(130px,1fr) 80px 128px 128px 96px 84px";
@@ -64,24 +74,82 @@ function WhenInput(props: {
   onChange: (patch: RowPatch) => void;
 }) {
   const { row, invalid, describedBy, disabled, onChange } = props;
-  const [draft, setDraft] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [segment, setSegment] = useState<Segment>("day");
+  const [buffer, setBuffer] = useState("");
 
-  const commit = (): boolean => {
-    if (draft === null) {
-      return true;
+  // Keep the active segment selected after every render: React resets the caret when the text changes.
+  useLayoutEffect(() => {
+    const input = inputRef.current;
+    if (input && document.activeElement === input) {
+      const [start, end] = SEGMENT_RANGES[segment];
+      input.setSelectionRange(start, end);
     }
-    const parsed = parseWhenInput(draft, row.when);
+  });
+
+  const apply = (when: string) => {
+    if (when !== row.when || row.whenError !== null) {
+      onChange({ when, whenError: null });
+    }
+  };
+
+  const select = (next: Segment) => {
+    setSegment(next);
+    setBuffer("");
+  };
+
+  const move = (direction: 1 | -1) => {
+    const finished = finishSegment(row.when, segment, buffer);
+    apply(finished);
+    select(neighbourSegment(segment, direction));
+  };
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.ctrlKey || event.altKey || event.metaKey) {
+      return;
+    }
+    const { key } = event;
+    if (key === "ArrowLeft" || key === "ArrowRight") {
+      event.preventDefault();
+      move(key === "ArrowRight" ? 1 : -1);
+    } else if (key === "ArrowUp" || key === "ArrowDown") {
+      event.preventDefault();
+      apply(stepSegment(finishSegment(row.when, segment, buffer), segment, key === "ArrowUp" ? 1 : -1));
+      setBuffer("");
+    } else if (/^\d$/.test(key)) {
+      event.preventDefault();
+      const result = typeDigit(row.when, segment, buffer, key);
+      apply(result.when);
+      if (result.advance) {
+        select(neighbourSegment(segment, 1));
+      } else {
+        setBuffer(result.buffer);
+      }
+    } else if (key === "Backspace" || key === "Delete") {
+      event.preventDefault();
+      setBuffer("");
+    } else if (key === "/" || key === "." || key === "-" || key === ":" || key === " ") {
+      event.preventDefault();
+      move(1);
+    } else if (key.length === 1) {
+      event.preventDefault();
+    }
+  };
+
+  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    const parsed = parseWhenInput(event.clipboardData.getData("text"), row.when);
     if (parsed.ok) {
-      onChange({ when: parsed.when, whenError: null });
-      setDraft(null);
-      return true;
+      apply(parsed.when);
+    } else {
+      onChange({ whenError: parsed.message });
     }
-    onChange({ whenError: parsed.message });
-    return false;
+    setBuffer("");
   };
 
   return (
     <input
+      ref={inputRef}
       type="text"
       aria-label="When"
       aria-invalid={invalid || undefined}
@@ -92,16 +160,22 @@ function WhenInput(props: {
       data-entry-field="when"
       disabled={disabled}
       className={inputClass(invalid)}
-      value={draft ?? formatWhen(row.when)}
-      onFocus={(event) => event.currentTarget.select()}
-      onChange={(event) => setDraft(event.target.value)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && !event.ctrlKey && !event.altKey && !commit()) {
-          event.preventDefault();
-        }
+      value={displayWhen(row.when, segment, buffer)}
+      onFocus={(event) => {
+        select("day");
+        event.currentTarget.setSelectionRange(...SEGMENT_RANGES.day);
       }}
+      onMouseUp={(event) => {
+        select(segmentAt(event.currentTarget.selectionStart ?? 0));
+      }}
+      onChange={() => {
+        // Every edit goes through onKeyDown or onPaste, so the text always stays a valid date-time.
+      }}
+      onKeyDown={onKeyDown}
+      onPaste={onPaste}
       onBlur={() => {
-        commit();
+        apply(finishSegment(row.when, segment, buffer));
+        setBuffer("");
       }}
     />
   );

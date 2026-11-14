@@ -389,15 +389,29 @@ to feedback, D20):**
   row; Tab on the last field of the last (non-empty) row also adds a row; Ctrl+Enter submits; Alt+↑/↓ moves the row,
   Ctrl+D duplicates, Alt+Delete deletes; Ctrl+↑/↓ goes to the same
   field in the row above/below; Esc closes the list or undoes the typed text. Type: `e`/`i`/`t` then Tab.
-- **Deviation from AGENTS ("first field of the new row"):** a new row gets focus in **Description**, not Type, because
-  Type and When are sticky and normally unchanged.
-- When shows `dd/MM/yyyy HH:mm` and parses forgiving short forms (`5`, `5/3`, `14:30`, `5/3 14:30`). Amount accepts `,` or
+- **First focus (owner-confirmed):** a new, duplicated or post-submit blank row focuses **When** with its **Day** part
+  selected (a deviation from AGENTS' "first field", which would be Type). Enter/Tab then moves on to Description.
+  Entry is not the default landing page. No compose profile for a throwaway Firefly is wanted.
+- When is a segmented picker over one text input showing `dd/MM/yyyy HH:mm`: focus selects the day; digits replace the
+  selected part and move on by themselves (`5` → day 05, `1` waits for a second digit; the year takes four digits);
+  ←/→ pick the part, ↑/↓ step it (wrapping inside the part; a day that no longer fits the month is clamped); `/ . - :`
+  and space move on. Pasting accepts the forgiving short forms (`5`, `5/3`, `14:30`, `5/3 14:30`). The value is always
+  a valid date-time. Amount accepts `,` or
   `.` and normalizes to `12,50`.
 - Description suggestions: debounced 250 ms, at least 2 characters, cancelled when stale, filtered client-side.
 - Submit validates every row client-side first and sends nothing if any is invalid. Only the empty row at the very end
   of the list is ignored; any other row without a description is invalid. Created rows lock and are never
   resent; `uncertain` rows are excluded until the owner chooses "Treat as not sent". The reference data is not
   invalidated after a submit; "Reload accounts" refreshes it.
+- **Submit is row by row (owner request, like the legacy app):** the client posts one row per `/entry/submit` request,
+  in grid order, and waits for each answer before sending the next. `SubmitRequest.previous` (optional list of
+  `yyyy-MM-ddTHH:mm` effective times of rows already created) seeds the server's time sequencer so strictly increasing
+  times continue across requests (bad value: 400 on `previous`). The button shows "Submitting X of N…" with a
+  `<progress>` bar, and the grid is `inert` while submitting. A stop (`failed`/`uncertain`, or a transport error) ends
+  the loop; the remaining rows become `notAttempted` and the banner counts created / needs attention / unconfirmed /
+  not sent. The 100-row `maxBatchSize` is still enforced by the server but no longer limits the client.
+  Limit: Firefly's queued balance recalculation is not observable through the API, so one-by-one posting only
+  spreads the load; it cannot guarantee the account balance is final (see HANDOVER Learnings).
 
 ### M6 – Browser tests and hardening
 

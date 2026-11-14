@@ -2,9 +2,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import { ApiError } from "../overview/api";
 import { describeError, ErrorPanel } from "../overview/ErrorPanel";
-import { fetchReference, type ReferenceData, refreshReference, submitRows } from "./api";
+import {
+  type BatchStop,
+  fetchReference,
+  type ReferenceData,
+  type RowResult,
+  type RowStatus,
+  refreshReference,
+  type SubmitResponse,
+  type SubmitSummary,
+  submitRows,
+} from "./api";
 import { buildLists, GRID_COLUMNS, GridRow } from "./GridRow";
-import { gridReducer, initialGrid } from "./gridReducer";
+import { type GridAction, gridReducer, initialGrid } from "./gridReducer";
 import {
   createFirstRow,
   FIELD_ORDER,
@@ -37,6 +47,7 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
   const [state, dispatch] = useReducer(gridReducer, reference, (ref) => initialGrid(createFirstRow(ref)));
   const [banner, setBanner] = useState<Notice | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [reloading, setReloading] = useState(false);
   const [submitTick, setSubmitTick] = useState(0);
   const [, setFocusTick] = useState(0);
@@ -92,9 +103,9 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
     }
     const nextRow = rows.slice(index + 1).find((candidate) => candidate.status === "draft");
     if (nextRow) {
-      requestFocus({ rowId: nextRow.id, field: "description" });
+      requestFocus({ rowId: nextRow.id, field: "when" });
     } else if (!isBlank(row)) {
-      requestFocus({ rowId: nextId, field: "description" });
+      requestFocus({ rowId: nextId, field: "when" });
       dispatch({ kind: "append" });
     }
   };
@@ -112,12 +123,12 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
         dispatch({ kind: "move", id, direction: action === "up" ? -1 : 1 });
         return;
       case "duplicate":
-        requestFocus({ rowId: nextId, field: "description" });
+        requestFocus({ rowId: nextId, field: "when" });
         dispatch({ kind: "duplicate", id });
         return;
       case "remove": {
         const neighbour = rows[index + 1] ?? rows[index - 1];
-        requestFocus({ rowId: neighbour ? neighbour.id : nextId, field: "description" });
+        requestFocus({ rowId: neighbour ? neighbour.id : nextId, field: "when" });
         dispatch({ kind: "remove", id });
         return;
       }
@@ -163,23 +174,89 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
       return;
     }
 
-    const batch = pending.slice(0, ref.maxBatchSize);
     submittingRef.current = true;
     setSubmitting(true);
     setBanner(null);
-    try {
-      const response = await submitRows(batch.map(toSubmitRow));
-      const action = { kind: "applyResults", sentIds: batch.map((row) => row.id), response } as const;
-      dispatch(action);
+    setProgress({ done: 0, total: pending.length });
 
-      const next = gridReducer(stateRef.current, action);
-      const last = next.rows[next.rows.length - 1];
-      const failed = next.rows.find((row) => row.status === "draft" && Object.keys(row.serverErrors).length > 0);
+    // One request per row, in grid order, like the legacy app: Firefly handles each transaction on its own.
+    const tally: SubmitSummary = { created: 0, invalid: 0, rejected: 0, failed: 0, uncertain: 0, notAttempted: 0 };
+    const lastTimes = new Map<string, string>();
+    let local = current;
+    let stopped: BatchStop | null = null;
+    let failure: unknown = null;
+    let attempted = 0;
+    const apply = (rowId: number, result: RowResult) => {
+      const action: GridAction = {
+        kind: "applyResults",
+        sentIds: [rowId],
+        response: { results: [result], summary: tally, stopped: null },
+      };
+      local = gridReducer(local, action);
+      dispatch(action);
+    };
+    const synthetic = (status: RowStatus, message: string | null): RowResult => ({
+      index: 0,
+      status,
+      id: null,
+      dateTime: null,
+      bumped: false,
+      code: null,
+      message,
+      errors: null,
+    });
+
+    try {
+      for (const row of pending) {
+        let response: SubmitResponse;
+        try {
+          response = await submitRows([toSubmitRow(row)], [...lastTimes.values()]);
+        } catch (error) {
+          failure = error;
+          if (error instanceof ApiError && error.code === "network") {
+            apply(
+              row.id,
+              synthetic("uncertain", "The server did not answer, so it is unknown whether this row was created."),
+            );
+            tally.uncertain += 1;
+            attempted += 1;
+          }
+          break;
+        }
+        const result = response.results[0];
+        if (!result) {
+          failure = new Error("The server returned no result for the row.");
+          break;
+        }
+        attempted += 1;
+        tally[result.status] += 1;
+        apply(row.id, result);
+        if (result.status === "created" && result.dateTime) {
+          const day = result.dateTime.slice(0, 10);
+          const known = lastTimes.get(day);
+          if (known === undefined || result.dateTime > known) {
+            lastTimes.set(day, result.dateTime);
+          }
+        }
+        setProgress({ done: attempted, total: pending.length });
+        if (response.stopped) {
+          stopped = response.stopped;
+          break;
+        }
+      }
+
+      for (const row of pending.slice(attempted)) {
+        apply(row.id, synthetic("notAttempted", null));
+        tally.notAttempted += 1;
+      }
+
+      const last = local.rows[local.rows.length - 1];
+      const failed = local.rows.find((row) => row.status === "draft" && Object.keys(row.serverErrors).length > 0);
       if (last && !isBlank(last)) {
         dispatch({ kind: "append" });
-        requestFocus({ rowId: next.nextId, field: "description" });
+        requestFocus({ rowId: local.nextId, field: "when" });
       } else if (last) {
-        requestFocus({ rowId: last.id, field: "description" });
+        requestFocus({ rowId: last.id, field: "when" });
       }
       if (failed) {
         const field = FIELD_ORDER.find((candidate) => failed.serverErrors[candidate] !== undefined);
@@ -188,40 +265,38 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
         }
       }
 
-      const { summary, stopped } = response;
-      const problems = summary.invalid + summary.rejected + summary.failed;
-      const parts = [`${summary.created} created in Firefly III`];
+      const problems = tally.invalid + tally.rejected + tally.failed;
+      const parts = [`${tally.created} created in Firefly III`];
       if (problems > 0) {
         parts.push(`${problems} need attention`);
       }
-      if (summary.uncertain > 0) {
-        parts.push(`${summary.uncertain} unconfirmed`);
+      if (tally.uncertain > 0) {
+        parts.push(`${tally.uncertain} unconfirmed`);
       }
-      if (summary.notAttempted > 0) {
-        parts.push(`${summary.notAttempted} not sent`);
+      if (tally.notAttempted > 0) {
+        parts.push(`${tally.notAttempted} not sent`);
       }
       let text = `${parts.join(", ")}.`;
       if (stopped) {
         text = `${text} ${describeError(new ApiError(0, stopped.code, stopped.message)).title}: ${stopped.message}`;
       }
-      if (pending.length > batch.length) {
-        text = `${text} ${pending.length - batch.length} more rows are waiting: submit again.`;
+      if (failure !== null) {
+        const { title } = describeError(failure, "The rows could not be submitted");
+        const detail = failure instanceof Error && failure.message ? ` ${failure.message}` : "";
+        const unsure =
+          failure instanceof ApiError && failure.code === "network"
+            ? " Check Firefly III before submitting again: the last row may already have been created."
+            : "";
+        text = `${text} ${title}.${detail}${unsure}`;
       }
       setBanner({
-        tone: stopped || summary.uncertain > 0 ? "warn" : problems > 0 ? "bad" : "muted",
+        tone: failure !== null ? "bad" : stopped || tally.uncertain > 0 ? "warn" : problems > 0 ? "bad" : "muted",
         text,
       });
-    } catch (error) {
-      const { title } = describeError(error, "The rows could not be submitted");
-      const detail = error instanceof Error && error.message ? ` ${error.message}` : "";
-      const unsure =
-        error instanceof ApiError && error.code === "network"
-          ? " Check Firefly III before submitting again: some rows may already have been created."
-          : "";
-      setBanner({ tone: "bad", text: `${title}.${detail}${unsure}` });
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
+      setProgress(null);
     }
   };
 
@@ -275,7 +350,7 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
           event.preventDefault();
           if (isBlank(row)) {
             // An empty row is not worth a copy: it would become an invalid empty row. Stay in the grid instead.
-            findInput(rowId, "description")?.focus();
+            findInput(rowId, "when")?.focus();
           } else {
             advance(rowId, field);
           }
@@ -313,7 +388,14 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
   return (
     <>
       <div className="overflow-x-auto rounded-lg border border-border">
-        <div role="grid" aria-label="Entries to submit" onKeyDown={onKeyDown} className="min-w-[960px] px-2 pb-1">
+        <div
+          role="grid"
+          aria-label="Entries to submit"
+          aria-busy={submitting}
+          inert={submitting}
+          onKeyDown={onKeyDown}
+          className="min-w-[960px] px-2 pb-1"
+        >
           <div role="rowgroup">
             <div
               role="row"
@@ -357,9 +439,19 @@ function EntryGrid({ reference, onReload }: { reference: ReferenceData; onReload
           onClick={requestSubmit}
           className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-surface hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {submitting ? "Submitting…" : `Submit ${ready} ${ready === 1 ? "row" : "rows"}`}
+          {progress
+            ? `Submitting ${Math.min(progress.done + 1, progress.total)} of ${progress.total}…`
+            : `Submit ${ready} ${ready === 1 ? "row" : "rows"}`}
           <span className="ml-2 font-normal opacity-70">Ctrl+Enter</span>
         </button>
+        {progress ? (
+          <progress
+            aria-label="Submit progress"
+            value={progress.done}
+            max={progress.total}
+            className="h-2 w-48 overflow-hidden rounded bg-surface-raised accent-accent"
+          />
+        ) : null}
         <button
           type="button"
           disabled={created === 0}

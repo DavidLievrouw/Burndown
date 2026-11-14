@@ -40,7 +40,12 @@ internal static class RowStatuses
 
 /// <summary>A batch of rows to create, in grid order.</summary>
 /// <param name="Rows">The rows. Required, not empty and at most the batch limit.</param>
-internal sealed record SubmitRequest(IReadOnlyList<SubmitRow>? Rows);
+/// <param name="Previous">
+/// The effective local date and times (<c>yyyy-MM-ddTHH:mm</c>) of rows that earlier requests of the same run already
+/// created. Rows of this request on the same calendar dates are placed after them, so that a run sent row by row keeps
+/// the entered order. Optional.
+/// </param>
+internal sealed record SubmitRequest(IReadOnlyList<SubmitRow>? Rows, IReadOnlyList<string>? Previous = null);
 
 /// <summary>One row of a batch. Every field is optional on the wire so that the server can report what is missing.</summary>
 /// <param name="Type">The row type, see <see cref="RowTypes"/>.</param>

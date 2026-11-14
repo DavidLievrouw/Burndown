@@ -74,6 +74,20 @@ public class TimestampSequencerTests
     }
 
     [Fact]
+    public void Seeded_times_push_the_next_row_on_that_date_one_minute_later_and_keep_the_latest()
+    {
+        var sequencer = new TimestampSequencer(Brussels);
+        sequencer.Seed(Local(5, 15, 9, 30));
+        sequencer.Seed(Local(5, 15, 9, 10));
+
+        var next = sequencer.Next(Local(5, 15, 9, 0));
+
+        next.Value.Local.ShouldBe(Local(5, 15, 9, 31));
+        next.Value.Bumped.ShouldBeTrue();
+        sequencer.Next(Local(5, 14, 9, 0)).Value.Bumped.ShouldBeFalse();
+    }
+
+    [Fact]
     public void Rejects_a_time_in_the_spring_forward_gap()
     {
         var sequencer = new TimestampSequencer(Brussels);

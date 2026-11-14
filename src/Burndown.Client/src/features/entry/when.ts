@@ -3,18 +3,28 @@
 
 const WHEN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 
-export const WHEN_HINT = "Type a date and/or time: 5, 5/3, 5/3/2026, 14:30 or 5/3 14:30";
+export const WHEN_HINT = "Use a date and/or time such as 5, 5/3, 5/3/2026, 14:30 or 5/3 14:30";
 
 function pad(value: number, length = 2): string {
   return String(value).padStart(length, "0");
 }
 
-function build(year: number, month: number, day: number, hour: number, minute: number): string {
+/** Builds `yyyy-MM-ddTHH:mm` from its parts, without checking them. */
+export function buildWhen(year: number, month: number, day: number, hour: number, minute: number): string {
   return `${pad(year, 4)}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}`;
 }
 
 function numbers(match: RegExpExecArray): [number, number, number, number, number] {
   return match.slice(1).map(Number) as [number, number, number, number, number];
+}
+
+/** Splits a valid `yyyy-MM-ddTHH:mm` into `[year, month, day, hour, minute]`. */
+export function splitWhen(when: string): [number, number, number, number, number] {
+  const match = WHEN.exec(when);
+  if (!match) {
+    throw new Error(`Not a local date-time: ${when}`);
+  }
+  return numbers(match);
 }
 
 /** The date part (`yyyy-MM-dd`) of a local date-time. */
@@ -47,7 +57,7 @@ export function addMinutes(when: string, minutes: number): string {
   }
   const [year, month, day, hour, minute] = numbers(match);
   const moved = new Date(Date.UTC(year, month - 1, day, hour, minute + minutes));
-  return build(
+  return buildWhen(
     moved.getUTCFullYear(),
     moved.getUTCMonth() + 1,
     moved.getUTCDate(),

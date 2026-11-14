@@ -25,6 +25,17 @@ internal sealed class TimestampSequencer
         _zone = zone;
     }
 
+    /// <summary>Records the time of a row that was already created, so that later rows are placed after it.</summary>
+    /// <param name="local">The effective local date and time of the created row.</param>
+    public void Seed(DateTime local)
+    {
+        var date = DateOnly.FromDateTime(local);
+        if (!_last.TryGetValue(date, out var last) || local > last)
+        {
+            _last[date] = local;
+        }
+    }
+
     /// <summary>Places the next row of the batch.</summary>
     /// <param name="local">The local date and time as entered, minute precision, of unspecified kind.</param>
     /// <returns>The effective timestamp, or a validation failure on <c>dateTime</c> when the row cannot be placed.</returns>
