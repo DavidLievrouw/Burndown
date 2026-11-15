@@ -59,7 +59,13 @@ feature slices. Document exceptions and enforce important boundaries with archit
 - Examine the existing code and working tree before changing files. Preserve unrelated user changes.
 - Follow the repository's existing patterns and architecture; make complete, focused changes without unrelated cleanup.
 - Keep secrets, credentials, connection strings, personal data, and production database contents out of source, logs,
-  test output, and external services.
+  test output, and external services. Never copy a secret found in the git history; tell the owner to rotate it.
+- Never write to the owner's real system of record (a production database, a live external service holding real
+  data). Read-only exploration only when the owner explicitly asks. Tests and manual agent runs use a throwaway
+  instance with synthetic data.
+- Log counts and ids, not content: free-text values (descriptions, names, notes) are personal data. Never log request
+  or response bodies.
+- An explicit owner directive that contradicts the plan wins; apply it and update the plan so the two agree again.
 - Validate submitted data on the server. Report errors through the application's standard result, logging, or UI
   mechanisms; do not hide failures behind broad catches or success-shaped fallbacks.
 - Ask before making product or schema decisions that are not established by code or documentation.
@@ -93,6 +99,14 @@ Adapt these rules to the new repository; remove any that do not fit:
   every writer, including import tools. Add a test that checks it.
 - Use the configured time abstraction (for .NET, prefer `TimeProvider`); avoid direct local-clock calls in business
   logic.
+- Parsing and formatting: always pass an explicit `IFormatProvider` (usually `CultureInfo.InvariantCulture` for wire
+  and test data, the app culture for user-facing text) to every `Parse`/`TryParse`/`ParseExact`/`ToString` of numbers,
+  dates and times, including `DateTime`, `DateTimeOffset`, `DateOnly`, `TimeOnly` and `decimal`, and in test projects.
+  Never depend on the ambient culture. On the client, do not use `toLocaleDateString`, `dateStyle` and the like: build
+  user-facing date text from one shared formatter.
+- Money is `decimal`, never `double`/`float`, and is parsed and formatted only through shared helpers.
+- Build JSON only with `System.Text.Json` and typed models, never by string interpolation or concatenation (quote
+  injection).
 - Time zones:
   - Store instants (things that happened or are recorded) in the database as UTC, and always as UTC on the wire (APIs,
     logs, serialization).
@@ -116,8 +130,13 @@ Adapt these rules to the new repository; remove any that do not fit:
     for scheduled items. Two users can be on different dates at the same instant; never compute "today" in UTC or the
     server's zone for them.
   - Use `DateOnly` for pure dates that have no time-of-day meaning.
+  - A single-user or single-site app may skip the profile/browser chain and use one configured zone (IANA id) exposed
+    by one shared clock. Send timestamps with an explicit offset.
+  - "Now", "today" and the allowed date range come from the server, never the browser clock. A user-entered timestamp
+    on the current date must never be written later than now.
   - Test the DST boundaries, a zone far from the server's (for example UTC+13 and UTC-10), a profile zone that
-    differs from the browser zone, and a "today" that differs between two users at the same instant.
+    differs from the browser zone, a "today" that differs between two users (or between UTC and the configured zone) at
+  the same instant, and the month boundary near midnight in the zone versus UTC.
 - Always specify the `DateTimeKind` when creating a `DateTime` (`new DateTime(…, DateTimeKind.Utc)`; use `Unspecified`
   for zone-less values). This applies to test projects too.
 - Keep route and external data formats stable unless a change is intentional and documented.
@@ -175,19 +194,53 @@ Adapt these rules to the new repository; remove any that do not fit:
   data git-ignored and delete every copy after use. Source files of legacy data are git-ignored, opened read-only, and
   never used in automated tests.
 
+## External API integration
+
+Applies when the app (often a backend-for-frontend) reads or writes data owned by another service. Remove it otherwise.
+
+- Call the API from the server with a typed `HttpClient` from `IHttpClientFactory`, a configured base URL and timeouts.
+  The browser never sees the credentials or talks to the upstream directly. Keep the upstream's wire format in one
+  client project; features use its typed models and ids.
+- Always follow the upstream's pagination; never rely on a huge page size. Request only what a view needs (date range,
+  type filters).
+- Map upstream validation errors (for example 422 keyed by field) to row/field errors in the app's response, and map
+  401/403/5xx and timeouts to distinct, user-readable errors. Never expose raw reason phrases or response bodies.
+- No blanket retries. Retry only idempotent reads, when measured to be needed. Never retry a write automatically.
+- Batch writes are sequential, report a result per item, and never resend an item that already succeeded (guard
+  against double submit).
+- Cache upstream reference data only with a short TTL, an explicit refresh path and a regression test. Do not cache
+  transactional data unless measured to matter.
+- Validate configuration at startup without the network. Checks that need the upstream belong to the readiness
+  endpoint and the UI; the upstream being down must not stop the app from starting.
+- Test the client and the endpoints against a throwaway instance of the upstream (for example Testcontainers, image tag
+  pinned) seeded with synthetic data through its API. Cover pagination, error mapping, auth failure, partial batch
+  failure and ordering.
+
 ## Web, UI, and configuration
 
 - Follow the project's chosen UI framework and design system; do not introduce a second framework or ad-hoc controls
   without a clear need.
-- Design mobile-first and verify key flows at narrow and desktop widths (for example 390 px and 1440 px).
+- Support narrow (mobile) and wide (desktop) layouts equally: neither is the primary form factor unless the project
+  guide says so. Verify key flows at both widths (for example 390 px and 1440 px).
 - Prefer static or server-rendered content when it does not need client interactivity (auth and error pages), and add
   interactivity only where the user experience requires it. Avoid double data loads when a page is rendered on the
   server first and then becomes interactive (prerendering/hydration).
 - Self-host fonts, scripts and styles; load nothing from CDNs. Send security headers (CSP with a per-request nonce on
   every `<script>`, frame and content-type protections, HSTS outside development) and treat the site as HTTPS-only.
+- Local-only app without login (an explicit owner decision, the exception to the security-header and antiforgery rules
+  below): restrict allowed hosts (DNS rebinding), accept state-changing requests only with
+  `Content-Type: application/json` and an allowed `Origin` (no Origin for non-browser clients), use non-GET methods for
+  every state change, and bind to loopback when run directly. In a container the server listens on all container
+  interfaces and exposure is restricted by the port mapping. A random web page must not be able to post to the app.
+- Accessibility and keyboard use: use correct ARIA roles (for example grid, combobox, listbox), visible focus and
+  explicit focus management. Do not trap focus and never steal focus while the user types.
+- Front-end (non-Blazor SPA) conventions: strict TypeScript with no `any`, feature-oriented folders, server state
+  through a query library (for example TanStack Query), keyboard handling in small tested hooks, and no business rules
+  duplicated from the server beyond input affordances (the server stays authoritative).
 - Culture and localization: when the UI is localized, configure request localization with the supported culture, set
-  `<html lang>`, and make sure globalization is not invariant (`InvariantGlobalization=false`). Verify in a browser that
-  the localized component-library strings actually appear.
+  `<html lang>`, and make sure globalization is not invariant (`InvariantGlobalization=false`); this also applies when
+  the app needs a culture's formats or IANA time zone data (ICU and tzdata must be in the image). Verify in a browser
+  that the localized component-library strings actually appear.
 - Avoid layout shifts caused by validation on blur: a banner or message that appears on blur can move the page between
   mouse-down and mouse-up and make a click on a suggestion or button miss. Show summary banners only after an explicit
   submit, and defer blur handlers that would change the layout.
@@ -223,7 +276,19 @@ boundary cases, concurrency/conflicts, and important business rules—not only h
 
 - Browser tests need a real HTTP listener (not the in-memory `TestServer`) when they drive a live-connection UI (for
   example Blazor circuits or WebSockets); install the browsers once after a build. Log in once and reuse the stored
-  state, and account for login throttling in fixtures.
+  state, and account for login throttling in fixtures. A browser-test fixture must never bind the app's default or
+  deployed port: listen on port 0 and neutralize any default-URL fallback (for example override `ASPNETCORE_URLS`,
+  restoring it afterwards), so a running container cannot collide. A SPA's built front-end must be present in the host's
+  static root before the browser tests run.
+- Configure test hosts explicitly (settings, secrets, clock, upstream URL); never rely on the developer's user-secrets
+  or environment variables.
+- A fake clock whose "now" equals a client default (for example the default time of a new row) hides bugs: choose a
+  "now" that does not coincide with defaults, and assert ordering relations ("not later than now") instead of exact
+  offsets.
+- Architecture tests also forbid `DateTime.Now`/`UtcNow`, Newtonsoft and primary constructors on classes where the
+  project adopts those rules.
+- With xUnit v3 and `dotnet test --solution`, `global.json` must select the Microsoft.Testing.Platform runner. A
+  project that ran zero tests fails the run (exit code 8).
 - Collation-dependent logic implemented in .NET (for example import de-duplication) is only an approximation of the
   database: add parity tests against the real database and keep the unique indexes as the safety net.
 - Never pipe a long test run into `Select-Object -First N` (a cancelled run leaves the test host running and locks
@@ -253,7 +318,13 @@ Run the smallest relevant checks, then expand when results warrant it:
 
 Also note platform gotchas here: line endings (enforce one style with `.editorconfig`; agent file tools may write CRLF, so
 normalize new files), `git -c safe.directory=…` when Git reports "dubious ownership", and Roslynator rules that the
-build enforces (for example prefer `[0]` over `First()` on lists).
+build enforces (for example prefer `[0]` over `First()` on lists). Further gotchas worth recording:
+
+- Windows PowerShell `>` redirection writes UTF-16: never use it to produce files.
+- Run the host from its build output folder, otherwise `appsettings.json` is not found.
+- Pass the formatter explicit project folders; a glob such as `src/App.*` can also match the solution file.
+- A front-end build that writes into the host's static root is git-ignored (keep a `.gitkeep`); tests must not assume
+  that folder is empty.
 
 ## Performance and reliability
 
@@ -302,6 +373,10 @@ Document the repository's actual deployment setup here:
 - Database backup/restore and migration procedure: [TODO]
 - Required secrets/certificates and rotation procedure: [TODO]
 - Logging, monitoring, and resource limits: [TODO] (give the container a memory limit and measure it, see Performance)
+- Deploy script (if any): prompts for secrets, passes them to the container tooling through the process environment
+  only, and never writes them to a file. Where the container must reach a service on the host, use
+  `extra_hosts: host.docker.internal:host-gateway` if Docker does not provide the name. Keep the Dockerfile next to the
+  host project unless the project guide says otherwise.
 
 Use supported .NET runtime and SDK versions. Keep local development, tests, and production configuration consistent
 without copying production secrets or data into development.
