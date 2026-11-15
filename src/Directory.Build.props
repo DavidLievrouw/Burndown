@@ -1,4 +1,6 @@
 <Project>
+  <Import Project="version.props" />
+
   <!-- Applies only to the new Burndown.* projects; the old src/Burndown project keeps its own settings until it is removed (M8). -->
   <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
     <TargetFramework>net10.0</TargetFramework>

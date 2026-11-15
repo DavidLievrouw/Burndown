@@ -1,0 +1,13 @@
+<Project>
+  <!-- The version lives in the repository's version.txt; it applies only to the new Burndown.* projects. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
+    <BurndownVersion>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../version.txt').Trim())</BurndownVersion>
+    <Version>$(BurndownVersion)</Version>
+    <AssemblyVersion>$(BurndownVersion).0</AssemblyVersion>
+    <FileVersion>$(BurndownVersion).0</FileVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <InformationalVersion Condition="'$(SourceRevisionId)' == ''">$(BurndownVersion)</InformationalVersion>
+    <InformationalVersion Condition="'$(SourceRevisionId)' != ''"
+      >$(BurndownVersion)+$(SourceRevisionId)</InformationalVersion>
+  </PropertyGroup>
+</Project>

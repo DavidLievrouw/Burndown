@@ -52,7 +52,10 @@ Pending decisions (resolve in the named milestone, then record here):
   how Enter behaves in a combobox (accept, then advance?), date/time entry (fixed `dd/MM/yyyy HH:mm` mask versus
   short forms such as typing only the day number), the shortcut map (submit, duplicate, delete, move; avoid browser-
   reserved combinations). There is no paste support (D21).
-- **Version info** (M7): `version.txt` or `version.props`.
+- **Version info** (M7): **decided in M7:** `version.txt` in the repository root (`1.0.0`), read by `src/version.props`
+  (imported by `src/Directory.Build.props`, `Burndown.*` projects only) into `Version`, `AssemblyVersion`,
+  `FileVersion` and `InformationalVersion` (`+<SourceRevisionId>` when the Docker build passes
+  `--build-arg SOURCE_REVISION_ID=<sha>`). The compose image tag defaults to the same number.
 
 ## Write safety (binding from M4, the first milestone that writes to Firefly)
 
@@ -437,6 +440,15 @@ and `Microsoft.AspNetCore` logs are at Warning, so no URLs with descriptions lea
   `ASPNETCORE_URLS=http://+:9142` inside the container), exec-form healthcheck, compose file under
   `docker-compose/` with `127.0.0.1:9142` publish, memory limit and heap cap, `.env.example`.
 - README with run instructions, token creation/rotation. Measure memory.
+
+**M7 as delivered:** `src/Burndown.Web/Dockerfile` (node:24 client stage, SDK 10 publish stage, runtime
+`aspnet:10.0-noble-chiseled-extra`, non-root, `ASPNETCORE_URLS=http://+:9142`, `ASPNETCORE_HTTP_PORTS` cleared to avoid
+Kestrel's port-override warning, `DOTNET_gcServer=0`, `DOTNET_GCHeapHardLimitPercent=50`, exec-form healthcheck; build
+context is the repository root). `docker-compose/burndown/docker-compose.yml` (project and service `burndown-web`,
+container `burndown-web`, port `127.0.0.1:9142:9142`, `mem_limit: 256m`, read-only root with `/tmp` tmpfs,
+`cap_drop: ALL`, `no-new-privileges`, `FIREFLY_TOKEN` required) and `.env.example`. Root `README.md`. `version.txt`
+and `src/version.props`. `.dockerignore` extended. The explicit compose project name matters: the legacy compose file
+in the repository root would otherwise share the project and service name `burndown`.
 
 ### M8 – Parity review and removal of the old app (only on the owner's request)
 

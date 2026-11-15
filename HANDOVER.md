@@ -14,7 +14,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | M4 Entry back-end | Delivered, awaiting owner review |
 | M5 Entry grid UI | Delivered, awaiting owner review |
 | M6 Browser tests and hardening | Delivered, awaiting owner review |
-| M7 Packaging | Not started |
+| M7 Packaging | Delivered, awaiting owner review |
 | M8 Parity review and removal of old app | Not started |
 
 ## Delivered so far
@@ -225,10 +225,30 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   "Submit N rows". The banner counts only the latest submit run.
 - **Write safety:** no request went to the live Firefly; the characteristics tests used a throwaway container.
 
-## Next: M7 – Packaging
+### M7 – Packaging (delivered)
 
-Dockerfile at `src/Burndown.Web/Dockerfile`, compose file under `docker-compose/`, `.env.example`, README with token
-creation/rotation, memory measurement (see PLAN M7). Wait for the owner's review of M6 first.
+- New: `src/Burndown.Web/Dockerfile`, `docker-compose/burndown/docker-compose.yml` + `.env.example`, root `README.md`,
+  `version.txt` (`1.0.0`) + `src/version.props` (imported by `src/Directory.Build.props`, `Burndown.*` only; the old
+  project is unaffected). `.dockerignore` extended. Design and flags: see PLAN "M7 as delivered".
+- Verified with the built image and compose against a **throwaway Firefly 6.6.6** (synthetic data, port 18142; the live
+  Firefly was never contacted): container `healthy`, runs as uid 1654, read-only root fs, no capabilities; `/health/live`
+  200, `/health/ready` 200 (with matching ids; 503 with the default ids 16/13/14, as designed), SPA served, API reads 200,
+  foreign `Host` 400, foreign `Origin` POST 403, logs contain no token. A missing `FIREFLY_TOKEN` makes compose refuse
+  to start. All containers and the throwaway Firefly were removed again.
+- **Memory** (`docker stats`, 256 MiB limit, heap hard limit 50 % = 128 MiB): 32 MiB idle after start, 65 MiB after
+  about 450 requests (overview, reference, SPA). Plenty of headroom, so 256 MiB and 50 % stay.
+- Gotchas: the aspnet chiseled image sets `ASPNETCORE_HTTP_PORTS=8080`, which makes Kestrel warn when
+  `ASPNETCORE_URLS` is also set (cleared in the Dockerfile). The new compose file needs its own project name
+  (`burndown-web`): the legacy compose in the root uses project and service `burndown`, so a shared name would let
+  `compose up` recreate or orphan the legacy container. New files are LF. Compose variables must be set in the same
+  PowerShell call as `docker compose` (env vars do not persist between tool calls).
+- Not done (by design): no automated image build in tests; the browser tests still run the host directly.
+
+## Next: M8 – Parity review and removal of the old app
+
+Only on the owner's request, after the owner signs off parity and reviews M7 (see PLAN M8). Remind the owner to rotate
+the old OAuth client secret (still in git history) and Firefly's `STATIC_CRON_TOKEN` (printed once into tool output
+during an earlier session).
 
 ## Environment facts
 

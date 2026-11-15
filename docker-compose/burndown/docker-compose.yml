@@ -1,0 +1,33 @@
+name: burndown-web
+
+services:
+  burndown-web:
+    image: burndown-web:${BURNDOWN_VERSION:-1.0.0}
+    build:
+      context: ../..
+      dockerfile: src/Burndown.Web/Dockerfile
+    # Another project, service and container name than the legacy app's `burndown`, so that both can coexist.
+    container_name: burndown-web
+    restart: unless-stopped
+    ports:
+      # Loopback only: the app has no login. Never publish this port on another interface.
+      - "127.0.0.1:9142:9142"
+    environment:
+      - Firefly__BaseUrl=${FIREFLY_BASE_URL:-http://host.docker.internal:8042}
+      - Firefly__Token=${FIREFLY_TOKEN:?Set FIREFLY_TOKEN in docker-compose/burndown/.env or in your environment}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    mem_limit: 256m
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "dotnet", "Burndown.Web.dll", "--health-check"]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3

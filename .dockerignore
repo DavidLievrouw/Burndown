@@ -8,3 +8,8 @@
 src/tests/
 src/Burndown/
 dist/
+docker-compose/
+src/Burndown.Web/wwwroot/
+src/Burndown.Client/coverage/
+**/*.user
+**/TestResults/
