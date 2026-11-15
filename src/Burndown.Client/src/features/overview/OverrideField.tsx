@@ -8,7 +8,7 @@ interface OverrideFieldProps {
   onChange: (text: string) => void;
 }
 
-export function OverrideField({ text, computed, onChange }: OverrideFieldProps) {
+export function OverrideField({ text, computed, onChange }: Readonly<OverrideFieldProps>) {
   const id = useId();
   const errorId = `${id}-error`;
   const parsed = parseOverride(text);
@@ -44,7 +44,7 @@ export function OverrideField({ text, computed, onChange }: OverrideFieldProps) 
                 onChange("");
               }
             }}
-            className="w-36 rounded-md border border-border bg-surface py-1.5 pr-2 pl-6 text-right text-sm tabular-nums placeholder:text-muted/70 aria-[invalid=true]:border-bad"
+            className="w-36 rounded-md border border-border bg-surface py-1.5 pr-2 pl-6 text-right text-sm tabular-nums placeholder:text-muted aria-[invalid=true]:border-bad"
           />
         </div>
         <button

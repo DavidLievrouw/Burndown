@@ -420,6 +420,17 @@ to feedback, D20):**
 - Error UX: token expired, Firefly down, timeouts. Accessibility pass (roles, focus, contrast).
 - Review logging (no tokens, no descriptions) and round-trip counts.
 
+**M6 as delivered:** the browser suite runs against a real Kestrel listener with the scriptable `FakeFireflyClient`
+(`CreateFailure`, `ReadFailure`, `Script()`); the throwaway Firefly stays covered by the characteristics tests. New
+tests: mixed expense/income/transfer batch, rejected row (field error, resubmit sends only that row), uncertain row
+(batch stops, "Treat as not sent"), rejected token on submit, long error text without overflow at 1440/1024 px,
+Overview error alerts (unauthorized, unavailable, timeout) with "Try again", Entry load panel and "Reload accounts"
+failure/recovery, Overview round trips (at most 6 transaction requests per month), and an accessibility test (named
+grid controls, listbox/`aria-expanded`, `aria-invalid` on a rejected field). Contrast pass: all text tokens meet WCAG AA
+(muted 6.45:1, bad 6.29:1, ok 8.53:1, accent 7.72:1); placeholders were `muted/60` (3.0:1) and are now full `muted`.
+Logging review: only paths (never query strings, bodies, tokens or descriptions) are logged; `System.Net.Http.HttpClient`
+and `Microsoft.AspNetCore` logs are at Warning, so no URLs with descriptions leak.
+
 ### M7 – Packaging
 
 - Multi-stage Dockerfile at `src/Burndown.Web/Dockerfile` (client build, publish, chiseled non-root runtime;

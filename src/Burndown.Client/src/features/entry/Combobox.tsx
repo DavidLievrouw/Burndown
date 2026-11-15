@@ -15,7 +15,7 @@ interface BaseProps {
 }
 
 const INPUT_CLASS =
-  "h-8 w-full min-w-0 rounded border bg-surface px-2 text-sm text-text outline-none placeholder:text-muted/60 focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-60";
+  "h-8 w-full min-w-0 rounded border bg-surface px-2 text-sm text-text outline-none placeholder:text-muted focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-60";
 
 export function inputClass(invalid: boolean | undefined): string {
   return `${INPUT_CLASS} ${invalid ? "border-bad" : "border-border"}`;
@@ -31,7 +31,7 @@ interface PopupProps {
 }
 
 /** The suggestion list. It is fixed-positioned under the input so that it never changes the grid's layout. */
-function Popup({ anchor, listboxId, options, highlight, onPick, hint }: PopupProps) {
+function Popup({ anchor, listboxId, options, highlight, onPick, hint }: Readonly<PopupProps>) {
   const [box, setBox] = useState<{ left: number; top: number; width: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -109,7 +109,7 @@ interface SelectProps extends BaseProps {
  * A combobox over a fixed list. Typing filters it and pre-highlights the first match; Enter or Tab accepts it, and
  * leaving the field without a match restores the previous value.
  */
-export function SelectCombobox(props: SelectProps) {
+export function SelectCombobox(props: Readonly<SelectProps>) {
   const {
     items,
     value,
@@ -148,68 +148,105 @@ export function SelectCombobox(props: SelectProps) {
     setNavigated(false);
   };
 
+  const reset = () => {
+    setDraft(null);
+    setOpen(false);
+    setNavigated(false);
+  };
+
+  const moveHighlight = (event: KeyboardEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    setNavigated(true);
+    if (!open) {
+      setOpen(true);
+      setHighlight(0);
+      return;
+    }
+    const count = options.length;
+    if (count === 0) {
+      return;
+    }
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    setHighlight((current) => (current + step + count) % count);
+  };
+
+  const clearOrBlock = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!allowEmpty) {
+      event.preventDefault();
+      return;
+    }
+    onSelect(null);
+    reset();
+  };
+
+  const handleEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (showing && navigated) {
+      // Accepts the option the user moved to, then lets the grid move on.
+      accept(highlight);
+      return;
+    }
+    if (draft === null) {
+      return;
+    }
+    if (draft.trim() === "") {
+      clearOrBlock(event);
+    } else if (showing) {
+      accept(highlight);
+    } else {
+      event.preventDefault();
+    }
+  };
+
+  const handleTab = () => {
+    // An emptied box only accepts a highlighted option the user actively moved to; otherwise it is left as is.
+    const hasText = draft !== null && draft.trim() !== "";
+    if (showing && (navigated || hasText)) {
+      accept(highlight);
+    }
+  };
+
+  const handleEscape = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!open && draft === null) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    reset();
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (isModified(event)) {
       return;
     }
     switch (event.key) {
       case "ArrowDown":
-      case "ArrowUp": {
-        event.preventDefault();
-        setNavigated(true);
-        if (!open) {
-          setOpen(true);
-          setHighlight(0);
-          return;
-        }
-        const count = options.length;
-        if (count > 0) {
-          setHighlight((current) => (current + (event.key === "ArrowDown" ? 1 : -1) + count) % count);
-        }
+      case "ArrowUp":
+        moveHighlight(event);
         return;
-      }
-      case "Enter": {
-        if (showing && navigated) {
-          // Accepts the option the user moved to, then lets the grid move on.
-          accept(highlight);
-          return;
-        }
-        if (draft !== null && draft.trim() === "") {
-          if (allowEmpty) {
-            onSelect(null);
-            setDraft(null);
-            setOpen(false);
-          } else {
-            event.preventDefault();
-          }
-          return;
-        }
-        if (draft !== null) {
-          if (showing) {
-            accept(highlight);
-          } else {
-            event.preventDefault();
-          }
-        }
+      case "Enter":
+        handleEnter(event);
         return;
-      }
-      case "Tab": {
-        // An emptied box only accepts a highlighted option the user actively moved to; otherwise it is left as is.
-        if (showing && (navigated || (draft !== null && draft.trim() !== ""))) {
-          accept(highlight);
-        }
+      case "Tab":
+        handleTab();
         return;
-      }
-      case "Escape": {
-        if (open || draft !== null) {
-          event.preventDefault();
-          event.stopPropagation();
-          setDraft(null);
-          setOpen(false);
-          setNavigated(false);
-        }
+      case "Escape":
+        handleEscape(event);
         return;
+    }
+  };
+
+  // Leaving the field resolves typed text that exactly matches an item (or an emptied box when that is allowed).
+  const commitTypedText = (text: string) => {
+    const typed = normalize(text.trim());
+    if (typed === "") {
+      if (allowEmpty) {
+        onSelect(null);
       }
+      return;
+    }
+    const exact = items.find((item) => normalize(item.label) === typed);
+    if (exact) {
+      onSelect(exact.key);
     }
   };
 
@@ -217,21 +254,9 @@ export function SelectCombobox(props: SelectProps) {
     const accepted = acceptedRef.current;
     acceptedRef.current = false;
     if (draft !== null && !accepted) {
-      const typed = normalize(draft.trim());
-      if (typed === "") {
-        if (allowEmpty) {
-          onSelect(null);
-        }
-      } else {
-        const exact = items.find((item) => normalize(item.label) === typed);
-        if (exact) {
-          onSelect(exact.key);
-        }
-      }
+      commitTypedText(draft);
     }
-    setDraft(null);
-    setOpen(false);
-    setNavigated(false);
+    reset();
     onFocusChange?.(false);
   };
 
@@ -294,7 +319,7 @@ interface TextProps extends BaseProps {
  * A free-text field with suggestions. A suggestion that starts with the typed text is pre-highlighted; Enter or Tab
  * accepts it, Escape closes the list and keeps what was typed.
  */
-export function TextCombobox(props: TextProps) {
+export function TextCombobox(props: Readonly<TextProps>) {
   const {
     value,
     suggestions,
@@ -337,40 +362,50 @@ export function TextCombobox(props: TextProps) {
     setHighlight(-1);
   };
 
+  const moveHighlight = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!showing) {
+      return;
+    }
+    event.preventDefault();
+    const count = ranked.length;
+    if (event.key === "ArrowDown") {
+      setHighlight(current < 0 ? 0 : (current + 1) % count);
+    } else {
+      setHighlight(current <= 0 ? count - 1 : current - 1);
+    }
+  };
+
+  const acceptActive = () => {
+    if (active >= 0) {
+      accept(active);
+    }
+  };
+
+  const handleEscape = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!showing) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    setDismissed(true);
+  };
+
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (isModified(event)) {
       return;
     }
     switch (event.key) {
       case "ArrowDown":
-      case "ArrowUp": {
-        if (!showing) {
-          return;
-        }
-        event.preventDefault();
-        const count = ranked.length;
-        if (event.key === "ArrowDown") {
-          setHighlight(current < 0 ? 0 : (current + 1) % count);
-        } else {
-          setHighlight(current <= 0 ? count - 1 : current - 1);
-        }
+      case "ArrowUp":
+        moveHighlight(event);
         return;
-      }
       case "Enter":
-      case "Tab": {
-        if (active >= 0) {
-          accept(active);
-        }
+      case "Tab":
+        acceptActive();
         return;
-      }
-      case "Escape": {
-        if (showing) {
-          event.preventDefault();
-          event.stopPropagation();
-          setDismissed(true);
-        }
+      case "Escape":
+        handleEscape(event);
         return;
-      }
     }
   };
 

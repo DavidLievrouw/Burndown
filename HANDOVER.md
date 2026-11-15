@@ -13,7 +13,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | M3 Overview UI and chart | Delivered, awaiting owner review |
 | M4 Entry back-end | Delivered, awaiting owner review |
 | M5 Entry grid UI | Delivered, awaiting owner review |
-| M6 Browser tests and hardening | Not started |
+| M6 Browser tests and hardening | Delivered, awaiting owner review |
 | M7 Packaging | Not started |
 | M8 Parity review and removal of old app | Not started |
 
@@ -199,12 +199,36 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 - **Result in practice (owner, 2026-11-14):** after the row-by-row submit, a batch of transactions in KBC Mastercard
   Gold left the balance correct. So sequential posting avoids the stale saldo on the live instance, even though the
   mechanism (rules racing the recalculation, most likely) is unproven. Older broken rows stay as they are.
+- **Follow-up live DB analysis (SELECT only):** the Mastercard batch (5 rows, all created within the same second)
+  has an intact chain. Across all data since 2025-01 (about 6,800 rows, 143 chain breaks = 2%) the breaks do **not**
+  correlate with backdated inserts (38% of broken vs 40% of intact rows), edits after creation, transaction type, or
+  burst creation (0 of 34 rows created within 2 s of the previous journal were broken). They **do** cluster in time:
+  Aug 2025 – Jan 2026 (11, 20, 9, 35, 31, 14 per month), then 0–2 per month from Feb 2026 on, none in Aug–Nov 2026. The
+  2026-11-14 stale rows (5350–5361) were repaired by the owner's re-saves, so the broken state is no longer visible.
+  Conclusion: the old breaks belong to a period (a Firefly version/config or the legacy app of that time), not to
+  rapid posting; the remaining open risk is a rare, unreproduced stale saldo. Row-by-row submit stays as protection.
 
-## Next: M6 – Browser tests and hardening
+### M6 – Browser tests and hardening (delivered)
 
-Extend the Playwright suite (mixed types, partial failure and uncertain rows with a scripted fake, throwaway Firefly),
-then error UX (token expired, Firefly down), an accessibility pass, and a logging/round-trip review. Adjust M5 on the
-owner's feedback first.
+- `FakeFireflyClient` is scriptable (`CreateFailure`, `ReadFailure`, `TransactionRequests`, `Script()` scope that
+  resets). New in `src/tests/Burndown.BrowserTests`: `BrowserPages.cs` (helpers incl. `BURNDOWN_SCREENSHOT_DIR`
+  screenshots), `EntryScenarioBrowserTests.cs`, `ErrorScreensBrowserTests.cs`. 24 browser tests total (13 new): see PLAN
+  "M6 as delivered" for the list.
+- Accessibility: contrast computed for all tokens (all AA); placeholder colour raised in `Combobox.tsx` and
+  `OverrideField.tsx`. Roles/names/`aria-invalid` asserted in a Playwright test. No other issue found.
+- Logging review: clean (paths only; HttpClient/AspNetCore at Warning). Overview needs at most 6 transaction requests
+  per month (tested).
+- Checks: `-warnaserror` build, CSharpier, Biome, `tsc`, client build clean; Vitest all green; fast .NET suite 312
+  passed; characteristics 25 passed (Docker, env vars unset); browser 24 passed.
+- Gotchas: the fake's `TimeProvider` is frozen, so the account cache never expires (use "Reload accounts" or route
+  aborts to fail the Entry load). After clicking a button, focus leaves the grid, so Ctrl+Enter does nothing: click
+  "Submit N rows". The banner counts only the latest submit run.
+- **Write safety:** no request went to the live Firefly; the characteristics tests used a throwaway container.
+
+## Next: M7 – Packaging
+
+Dockerfile at `src/Burndown.Web/Dockerfile`, compose file under `docker-compose/`, `.env.example`, README with token
+creation/rotation, memory measurement (see PLAN M7). Wait for the owner's review of M6 first.
 
 ## Environment facts
 
