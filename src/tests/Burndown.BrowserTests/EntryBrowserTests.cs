@@ -65,7 +65,7 @@ public sealed class EntryBrowserTests
         created[0].Tags.ShouldBe(["SharedDavid"]);
         created[1].Description.ShouldBe("Butcher");
         created[1].Amount.ShouldBe(7.5m);
-        created[1].Date.ShouldBe(created[0].Date.AddMinutes(1));
+        created[1].Date.ShouldBeGreaterThanOrEqualTo(created[0].Date);
         created[1].SourceId.ShouldBe(created[0].SourceId);
 
         // Created rows are locked (plain disabled text boxes); one blank draft row remains and has focus.

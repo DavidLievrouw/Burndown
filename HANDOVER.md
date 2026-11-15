@@ -169,7 +169,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   override documented as a compose profile?
 - **Third feedback round (row-by-row submit):** after the stale-saldo investigation (Learnings) the client now posts one
   row per request with progress ("Submitting X of N…", `<progress>`, inert grid), like the legacy app. Server:
-  `SubmitRequest.Previous` + `TimestampSequencer.Seed` keep the strictly increasing times across requests. Stops
+  `SubmitRequest.Previous` + `TimestampSequencer.Seed` keep the non-decreasing times across requests. Stops
   (`failed`/`uncertain`/network) leave the remaining rows as not sent. Details: PLAN "M5 as delivered". Tests: 189 Vitest,
   new unit tests for `Seed`/`Previous`, 11 Playwright and 25 characteristics tests green. **Limit:** Firefly's queued
   recalculation cannot be observed, so this does not guarantee a correct saldo; the durable fix is Firefly-side (sync
@@ -293,6 +293,30 @@ Firefly; `/health/ready` is 503 against any other instance.
 
 ## Learnings
 
+- Future-dated rows make the account balance look wrong (investigated read-only on the live DB, 15 Nov 2026, account
+  21, 17-row bulk entry from 8 Nov). Firefly's displayed current balance sums only transactions with
+  `transaction_journals.date <= now` (`Steam::finalAccountBalance`), while its stored `balance_before/after` chain
+  includes every row in date order. The stored chain was correct (total 307.25), but the UI showed 614.25 because two
+  rows (192 and 115) were dated today at 11:32/11:33 while the batch was submitted at about 11:23: the client's
+  "row above plus one minute" chain ran past the real time of day. It corrected itself once those times passed. This
+  was not the stale-saldo race below (`QUEUE_DRIVER=sync` live, no worker). Fix (owner decision): the server never
+  sends a row dated today later than its "now" (server clock, configured zone, minute precision). When the same-day
+  chain would run past now, `TimestampSequencer.Place` shifts it back (only as far as needed) so the last row lands at
+  now (moved rows are reported as `bumped`; the client shows "Time moved to HH:mm (not in the future, in entry
+  order)."). Never before the seed (previous submitted row): with no room, rows share that moment; nothing is rejected
+  for lack of room. Tomorrow and later are not capped.
+  Follow-up owner decision: several rows at exactly the same moment must stay allowed (Firefly allows it). The old rule
+  bumped equal times by +1 minute, so the rule is now non-decreasing per date (equal allowed, only earlier rows move
+  up). Characteristics tests confirm Firefly accepts identical timestamps and keeps creation order. Browser tests: the
+  fake "now" (10:00) equals the client's default time, so rows 2 and 3 now share 10:00 instead of 10:01/10:02.
+  `BrowserFixture` now sets `ASPNETCORE_URLS=http://127.0.0.1:0` while it runs (restored after), because `Program.cs`
+  otherwise also binds 9042, which the deployed container holds. The browser tests also need a built client in
+  `src/Burndown.Web/wwwroot` (`npm run build`) and Playwright Chromium. Results: 327 fast, 27 characteristics, 24
+  browser tests green. See PLAN D7. Tests: `TimestampSequencerTests` (`Place_*`),
+  `EntrySubmitServiceTests`, `EntrySubmitCharacteristics`, `gridReducer.test.ts`. Possible follow-up: cap the client's
+  default time (row above plus one minute) at the server's now, so the grid never proposes a future time. Check this
+  first when a balance looks off right after entering rows.
+
 - Stale account balance after a batch (investigated, not reproduced with defaults). Firefly keeps per-row
   `balance_before/after/dirty` and recalculates them in the `ProcessesNewTransactionGroup` listener, which is a queued
   listener. Throwaway Firefly 6.6.6 experiments (7 backdated posts incl. near-midnight, legacy naive-date payload versus
@@ -335,7 +359,7 @@ Firefly; `/health/ready` is 503 against any other instance.
   Kestrel must listen on `http://+:9142` (loopback-only binding applies to direct runs; compose restricts exposure); the
   Dockerfile lives at `src/Burndown.Web/Dockerfile` (a root `Dockerfile` would collide with the old `dockerfile` on
   Windows); `global.json` must select the MTP test runner; "now" and the date bounds come from the server;
-  description prefill is optional (D16, AGENTS.md aligned); the same-date timestamp bump compares with the nearest
+  description prefill is optional (D16, AGENTS.md aligned); the same-date timestamp rule (non-decreasing) compares with the nearest
   preceding row on the same date and the result carries the effective timestamp; DST gaps are rejected and overlaps
   take the first occurrence; alphas are rounded to 2 decimals for parity with the old output; day/month names are
   English with `nl-BE` numbers (one shared formatter, no ambient locale).

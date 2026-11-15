@@ -19,7 +19,10 @@ namespace Burndown.BrowserTests;
 public sealed class BrowserFixture : IAsyncLifetime
 {
     private WebApplicationFactory<Program>? _factory;
+    private const string UrlsVariable = "ASPNETCORE_URLS";
+
     private IPlaywright? _playwright;
+    private string? _previousUrls;
 
     public string BaseUrl { get; private set; } = string.Empty;
 
@@ -30,6 +33,9 @@ public sealed class BrowserFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
+        // Without a configured URL the host binds its fixed default port (9042), which the owner's container may hold.
+        _previousUrls = Environment.GetEnvironmentVariable(UrlsVariable);
+        Environment.SetEnvironmentVariable(UrlsVariable, "http://127.0.0.1:0");
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             builder
                 .UseEnvironment("Development")
@@ -75,6 +81,8 @@ public sealed class BrowserFixture : IAsyncLifetime
         {
             await _factory.DisposeAsync();
         }
+
+        Environment.SetEnvironmentVariable(UrlsVariable, _previousUrls);
     }
 }
 

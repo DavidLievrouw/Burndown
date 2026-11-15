@@ -65,7 +65,7 @@ public class EntrySubmitServiceTests
     }
 
     [Fact]
-    public async Task Continues_the_time_sequence_after_the_previous_times_of_earlier_requests()
+    public async Task Moves_a_row_up_to_the_previous_time_of_earlier_requests_but_allows_an_equal_time()
     {
         var result = await Create()
             .SubmitAsync(
@@ -74,8 +74,17 @@ public class EntrySubmitServiceTests
             );
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.Results[0].Bumped.ShouldBeTrue();
-        result.Value.Results[0].DateTime.ShouldBe("2026-05-15T09:31");
+        result.Value.Results[0].Bumped.ShouldBeFalse();
+        result.Value.Results[0].DateTime.ShouldBe("2026-05-15T09:30");
+
+        var earlier = await Create()
+            .SubmitAsync(
+                new SubmitRequest([Expense(dateTime: "2026-05-15T09:00")], ["2026-05-15T09:30"]),
+                TestContext.Current.CancellationToken
+            );
+
+        earlier.Value.Results[0].Bumped.ShouldBeTrue();
+        earlier.Value.Results[0].DateTime.ShouldBe("2026-05-15T09:30");
     }
 
     [Fact]
@@ -89,14 +98,62 @@ public class EntrySubmitServiceTests
     }
 
     [Fact]
-    public async Task Bumps_rows_on_the_same_date_and_reports_the_effective_time()
+    public async Task Allows_rows_on_exactly_the_same_moment_and_moves_an_earlier_row_up()
     {
-        var response = await SubmitAsync(Expense(dateTime: "2026-05-15T09:30"), Expense(dateTime: "2026-05-15T09:30"));
+        var response = await SubmitAsync(
+            Expense(dateTime: "2026-05-15T09:30"),
+            Expense(dateTime: "2026-05-15T09:30"),
+            Expense(dateTime: "2026-05-15T09:00")
+        );
 
-        response.Results[0].Bumped.ShouldBeFalse();
-        response.Results[1].Bumped.ShouldBeTrue();
-        response.Results[1].DateTime.ShouldBe("2026-05-15T09:31");
-        _firefly.Created[1].Date.ShouldBe(new DateTimeOffset(2026, 5, 15, 9, 31, 0, TimeSpan.FromHours(2)));
+        response.Results.Select(r => r.Bumped).ShouldBe([false, false, true]);
+        response.Results.Select(r => r.DateTime).ShouldBe(["2026-05-15T09:30", "2026-05-15T09:30", "2026-05-15T09:30"]);
+        _firefly.Created.Select(c => c.Date).Distinct().ShouldHaveSingleItem();
+        _firefly.Created[1].Date.ShouldBe(new DateTimeOffset(2026, 5, 15, 9, 30, 0, TimeSpan.FromHours(2)));
+    }
+
+    [Fact]
+    public async Task Shifts_the_rows_dated_today_back_so_the_last_lands_at_now_and_leaves_tomorrow_alone()
+    {
+        var response = await SubmitAsync(
+            Expense(dateTime: "2026-05-15T11:59"),
+            Expense(dateTime: "2026-05-15T12:30"),
+            Expense(dateTime: "2026-05-15T12:31"),
+            Expense(dateTime: "2026-05-16T00:05")
+        );
+
+        response
+            .Results.Select(r => r.Status)
+            .ShouldBe([RowStatuses.Created, RowStatuses.Created, RowStatuses.Created, RowStatuses.Created]);
+        response
+            .Results.Select(r => r.DateTime)
+            .ShouldBe(["2026-05-15T11:58", "2026-05-15T11:59", "2026-05-15T12:00", "2026-05-16T00:05"]);
+        response.Results.Select(r => r.Bumped).ShouldBe([true, true, true, false]);
+        _firefly.Created[0].Date.ShouldBe(new DateTimeOffset(2026, 5, 15, 11, 58, 0, TimeSpan.FromHours(2)));
+        _firefly.Created[2].Date.ShouldBe(new DateTimeOffset(2026, 5, 15, 12, 0, 0, TimeSpan.FromHours(2)));
+        _firefly.Created[3].Date.ShouldBe(new DateTimeOffset(2026, 5, 16, 0, 5, 0, TimeSpan.FromHours(2)));
+    }
+
+    [Fact]
+    public async Task Never_shifts_rows_dated_today_before_the_previous_row()
+    {
+        var request = new SubmitRequest(
+            [
+                Expense(dateTime: "2026-05-15T12:20"),
+                Expense(dateTime: "2026-05-15T12:21"),
+                Expense(dateTime: "2026-05-15T12:22"),
+            ],
+            ["2026-05-15T11:58"]
+        );
+
+        var result = await Create().SubmitAsync(request, TestContext.Current.CancellationToken);
+
+        var response = result.Value;
+        response
+            .Results.Select(r => r.Status)
+            .ShouldBe([RowStatuses.Created, RowStatuses.Created, RowStatuses.Created]);
+        response.Results.Select(r => r.DateTime).ShouldBe(["2026-05-15T11:58", "2026-05-15T11:59", "2026-05-15T12:00"]);
+        _firefly.Created.Count.ShouldBe(3);
     }
 
     [Fact]

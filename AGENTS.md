@@ -115,7 +115,7 @@ a batch of rows without touching the mouse and without clearing or retyping anyt
 - Submit status is per row. A partial failure never loses rows: failed rows stay, with the Firefly error mapped to the
   field; succeeded rows are marked and cannot be submitted twice (idempotent against double Ctrl+Enter).
 - Rows get explicit date+time values; a new row defaults to the row above plus one minute, and rows on the same calendar
-  date are strictly increasing in grid order (enforced by the server), so Firefly keeps the entry order. The next batch
+  date are non-decreasing in grid order (equal times are allowed, as in Firefly; an earlier time is moved up by the server; rows dated today are never sent later than now), so Firefly keeps the entry order. The next batch
   continues from the last submitted timestamp in the same session. This is required behavior (see `PLAN.md`). "Now" and
   the allowed date range come from the server (the reference-data response), never from the browser clock.
 - Accessibility: use correct ARIA roles (grid, combobox, listbox), visible focus, and manage focus explicitly. Do not
@@ -365,5 +365,5 @@ user-secrets/`.env`); `PLAN.md` and `HANDOVER.md` live in the repository root.
   an agent; tokens never in source, logs or tests; transaction content never logged.
 - **Data retention:** the app stores nothing; Firefly III owns all data.
 - **Versioning/release:** local Docker image built by the owner; version scheme per `PLAN.md`.
-- **Known constraints:** Firefly's autocomplete and pagination limits; timestamps within a calendar date are strictly
+- **Known constraints:** Firefly's autocomplete and pagination limits; timestamps within a calendar date are non-decreasing
   increasing in input order so Firefly shows entries as entered; the minimum month is 2023-12.

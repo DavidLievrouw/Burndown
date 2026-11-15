@@ -232,7 +232,7 @@ describe("gridReducer", () => {
     expect(b.status).toBe("uncertain");
     expect(b.notice?.text).toMatch(/Check Firefly/);
     expect(c).toMatchObject({ status: "created", createdId: 102, when: "2026-03-05T14:40" });
-    expect(c.notice?.text).toMatch(/14:40/);
+    expect(c.notice?.text).toBe("Time moved to 14:40 (not in the future, in entry order).");
     expect(d.when).toBe("2026-03-05T14:41");
   });
 

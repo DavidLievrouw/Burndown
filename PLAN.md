@@ -198,13 +198,20 @@ supplied by the server in the reference data; the client never uses its own cloc
   memory only).
 - Typing only a date changes the date; the time of day carries over from the row above (plus one minute when the date is
   unchanged).
-- Within one batch, rows that share a calendar date must have strictly increasing timestamps in grid order, compared
-  with the nearest preceding row **on the same date** (rows on other dates in between are ignored). The server enforces
-  this by bumping a row to that row's timestamp plus one minute if needed (so equal or earlier times are bumped); if the
-  bump would roll into the next day it rejects the row with a field error. Rows on different dates may appear in any
-  order. The server compares only within the batch it receives (it keeps no state), so the client is responsible for
+- Within one batch, rows that share a calendar date must have non-decreasing timestamps in grid order, compared
+  with the nearest preceding row **on the same date** (rows on other dates in between are ignored). Several rows at
+  exactly the same moment are allowed (as in Firefly, which orders equal dates by creation order, so the sequential
+  submit keeps the entry order). The server only moves a row that is *earlier* than that row up to its timestamp (no
+  +1 minute, no rollover into the next day). Rows on different dates may appear in any order. The server compares only within the batch it receives (it keeps no state), so the client is responsible for
   continuing the sequence across batches (see above). A bumped row's per-row result carries the effective timestamp,
   and the client shows it.
+- A row dated **today** (configured zone, server clock) is never sent later than the server's "now" (minute
+  precision). Firefly leaves future-dated transactions out of the current account balance (`date <= now`), which made
+  a long batch look like a wrong saldo. When the chain of today's rows would run past now, the
+  server shifts the chain back only as far as needed so the last row lands at now (rows that move are reported as
+  `bumped`; rows already early enough keep their time). Never before the previous submitted row (the seed): when there
+  is no room, rows share that moment instead of being rejected. The only same-day failure is a seed that is already
+  later than now. Tomorrow and later dates (up to the allowed maximum) are not capped.
 - Daylight saving: a local time that does not exist (spring forward) is rejected with a field error; an ambiguous one
   (fall back) resolves to the first (summer-time) occurrence. Both are covered by tests.
 
@@ -368,7 +375,7 @@ Each milestone ends with: build, format check, tests, handover update, then **st
   time-sequenced first; invalid rows do not take part in the sequence. `bumped` and `dateTime` report the effective
   time. Nothing is ever resent automatically. `apply_rules`/`fire_webhooks` are set by the Firefly client; they cannot be
   read back, so no test asserts them.
-- A bump that rolls into the next day or lands in a DST gap makes that row `invalid` on field `dateTime`.
+- A time that lands in a DST gap makes that row `invalid` on field `dateTime`.
 
 ### M5 – Entry grid UI (primary deliverable)
 
@@ -407,7 +414,7 @@ to feedback, D20):**
   invalidated after a submit; "Reload accounts" refreshes it.
 - **Submit is row by row (owner request, like the legacy app):** the client posts one row per `/entry/submit` request,
   in grid order, and waits for each answer before sending the next. `SubmitRequest.previous` (optional list of
-  `yyyy-MM-ddTHH:mm` effective times of rows already created) seeds the server's time sequencer so strictly increasing
+  `yyyy-MM-ddTHH:mm` effective times of rows already created) seeds the server's time sequencer so non-decreasing
   times continue across requests (bad value: 400 on `previous`). The button shows "Submitting X of N…" with a
   `<progress>` bar, and the grid is `inert` while submitting. A stop (`failed`/`uncertain`, or a transport error) ends
   the loop; the remaining rows become `notAttempted` and the banner counts created / needs attention / unconfirmed /

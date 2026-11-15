@@ -81,8 +81,9 @@ public sealed class EntryScenarioBrowserTests
         created[2].SourceId.ShouldBe(AccountId.From(2));
         created[2].DestinationId.ShouldBe(AccountId.From(1));
 
-        created[1].Date.ShouldBe(created[0].Date.AddMinutes(1));
-        created[2].Date.ShouldBe(created[1].Date.AddMinutes(1));
+        created[1].Date.ShouldBeGreaterThanOrEqualTo(created[0].Date);
+        created[2].Date.ShouldBeGreaterThanOrEqualTo(created[1].Date);
+        created.ShouldAllBe(c => c.Date <= SyntheticData.Now);
         await Assertions.Expect(page.Locator("[data-status='created']")).ToHaveCountAsync(3);
     }
 

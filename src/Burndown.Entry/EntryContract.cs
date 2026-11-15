@@ -84,7 +84,10 @@ internal sealed record SubmitResponse(IReadOnlyList<RowResult> Results, SubmitSu
 /// <param name="DateTime">
 /// The effective local date and time (<c>yyyy-MM-ddTHH:mm</c>) the row was sent with, when it was sent or is ready to be.
 /// </param>
-/// <param name="Bumped">Whether the time was moved to keep the entry order (see <paramref name="DateTime"/>).</param>
+/// <param name="Bumped">
+/// Whether the time was moved to keep the entry order or to keep a row dated today out of the future (see
+/// <paramref name="DateTime"/>).
+/// </param>
 /// <param name="Code">The stable error code when the row did not succeed.</param>
 /// <param name="Message">A user-readable message when the row did not succeed.</param>
 /// <param name="Errors">Per-field messages keyed by the field names of <see cref="SubmitRow"/> (or <c>row</c>).</param>

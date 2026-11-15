@@ -126,36 +126,49 @@ internal sealed partial class EntrySubmitService
     private List<PendingRow> Prepare(IReadOnlyList<SubmitRow> rows, List<DateTime> previous, RowResult?[] results)
     {
         var today = _clock.Today;
-        var sequencer = new TimestampSequencer(_clock.Zone);
+        var sequencer = new TimestampSequencer(_clock.Zone, _clock.Now.DateTime);
         foreach (var time in previous)
         {
             sequencer.Seed(time);
         }
 
-        var pending = new List<PendingRow>(rows.Count);
+        var validated = new Result<ValidRow>?[rows.Count];
+        var locals = new DateTime?[rows.Count];
         for (var index = 0; index < rows.Count; index++)
         {
-            var validated = rows[index] is { } row
+            var result = rows[index] is { } row
                 ? _validator.Validate(row, today)
                 : Result<ValidRow>.Failure(
                     new Error(ErrorCodes.Validation, "The row is not valid.", Field("row", "The row is empty."))
                 );
-            if (!validated.IsSuccess)
+            validated[index] = result;
+            if (result.IsSuccess)
             {
-                results[index] = Invalid(index, validated.Error);
+                locals[index] = result.Value.Local;
+            }
+            else
+            {
+                results[index] = Invalid(index, result.Error);
+            }
+        }
+
+        var placements = sequencer.Place(locals);
+        var pending = new List<PendingRow>(rows.Count);
+        for (var index = 0; index < rows.Count; index++)
+        {
+            if (placements[index] is not { } placed)
+            {
                 continue;
             }
 
-            var placed = sequencer.Next(validated.Value.Local);
             if (!placed.IsSuccess)
             {
                 results[index] = Invalid(index, placed.Error);
                 continue;
             }
 
-            pending.Add(
-                new PendingRow(index, validated.Value, placed.Value, ToTransaction(validated.Value, placed.Value))
-            );
+            var valid = validated[index]!.Value.Value;
+            pending.Add(new PendingRow(index, valid, placed.Value, ToTransaction(valid, placed.Value)));
         }
 
         return pending;

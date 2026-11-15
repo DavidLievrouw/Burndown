@@ -1,3 +1,4 @@
+using System.Globalization;
 using Burndown.Common;
 using Burndown.Entry;
 using Burndown.Firefly;
@@ -29,7 +30,7 @@ internal static class EntryTestData
     /// <summary>A clock fixed at the given UTC instant, in Europe/Brussels.</summary>
     public static (AppClock Clock, FakeTimeProvider Time) Clock(string utcInstant = "2026-05-15T10:00:00Z")
     {
-        var time = new FakeTimeProvider(DateTimeOffset.Parse(utcInstant));
+        var time = new FakeTimeProvider(DateTimeOffset.Parse(utcInstant, CultureInfo.InvariantCulture));
         return (new AppClock(time, Brussels), time);
     }
 

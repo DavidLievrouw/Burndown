@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
@@ -22,7 +23,7 @@ public class EntryEndpointTests
                     services.AddSingleton<IFireflyClient>(firefly);
                     services.RemoveAll<TimeProvider>();
                     services.AddSingleton<TimeProvider>(
-                        new FakeTimeProvider(DateTimeOffset.Parse("2026-05-15T10:00:00Z"))
+                        new FakeTimeProvider(DateTimeOffset.Parse("2026-05-15T10:00:00Z", CultureInfo.InvariantCulture))
                     );
                 })
             )

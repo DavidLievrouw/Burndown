@@ -1,3 +1,4 @@
+using System.Globalization;
 using Burndown.CharacteristicsTests.Infrastructure;
 using Burndown.Common;
 using Burndown.Entry;
@@ -42,7 +43,10 @@ public class EntrySubmitCharacteristics
                 new BudgetOption { Id = _firefly.TinaBudgetId.Value, Name = "Tina" },
             ],
         };
-        var clock = new AppClock(new FakeTimeProvider(DateTimeOffset.Parse("2026-05-15T10:00:00Z")), Brussels);
+        var clock = new AppClock(
+            new FakeTimeProvider(DateTimeOffset.Parse("2026-05-15T10:00:00Z", CultureInfo.InvariantCulture)),
+            Brussels
+        );
         return new EntrySubmitService(
             client,
             clock,
@@ -74,7 +78,7 @@ public class EntrySubmitCharacteristics
     }
 
     [Fact]
-    public async Task A_mixed_batch_is_created_in_order_with_the_right_accounts_and_bumped_times()
+    public async Task A_mixed_batch_on_exactly_the_same_moment_is_created_in_order_with_the_right_accounts()
     {
         var client = _firefly.CreateClient();
         var rows = new[]
@@ -113,10 +117,12 @@ public class EntrySubmitCharacteristics
         response
             .Results.Select(r => r.Status)
             .ShouldBe([RowStatuses.Created, RowStatuses.Created, RowStatuses.Created]);
-        response.Results.Select(r => r.DateTime).ShouldBe(["2026-05-12T09:30", "2026-05-12T09:31", "2026-05-12T09:32"]);
+        response.Results.Select(r => r.DateTime).ShouldBe(["2026-05-12T09:30", "2026-05-12T09:30", "2026-05-12T09:30"]);
+        response.Results.Select(r => r.Bumped).ShouldBe([false, false, false]);
 
         var stored = await ReadDayAsync(client, new DateOnly(2026, 5, 12));
         var ids = response.Results.Select(r => r.Id!.Value).ToList();
+        ids.ShouldBe(ids.Order().ToList());
         var expense = stored.Single(t => t.GroupId.Value == ids[0]);
         var income = stored.Single(t => t.GroupId.Value == ids[1]);
         var transfer = stored.Single(t => t.GroupId.Value == ids[2]);
@@ -131,11 +137,73 @@ public class EntrySubmitCharacteristics
         income.Type.ShouldBe(TransactionType.Deposit);
         income.SourceId.ShouldBe(_firefly.CashId);
         income.DestinationId.ShouldBe(_firefly.SavingsId);
-        income.Date.TimeOfDay.ShouldBe(new TimeSpan(9, 31, 0));
+        income.Date.TimeOfDay.ShouldBe(new TimeSpan(9, 30, 0));
         transfer.Type.ShouldBe(TransactionType.Transfer);
         transfer.SourceId.ShouldBe(_firefly.CheckingId);
         transfer.DestinationId.ShouldBe(_firefly.SavingsId);
-        transfer.Date.TimeOfDay.ShouldBe(new TimeSpan(9, 32, 0));
+        transfer.Date.TimeOfDay.ShouldBe(new TimeSpan(9, 30, 0));
+    }
+
+    [Fact]
+    public async Task Rows_dated_today_are_shifted_back_so_the_last_lands_at_now_and_tomorrow_is_left_alone()
+    {
+        var client = _firefly.CreateClient();
+        // The service clock is 2026-05-15 12:00 in Brussels.
+        var request = new SubmitRequest(
+            [
+                Expense("2026-05-15T11:59", "Entry today on time"),
+                Expense("2026-05-15T12:30", "Entry today shifted"),
+                Expense("2026-05-15T12:45", "Entry today last"),
+                Expense("2026-05-16T00:30", "Entry tomorrow"),
+            ],
+            ["2026-05-15T11:56"]
+        );
+
+        var result = await CreateService(client).SubmitAsync(request, Ct);
+
+        result.IsSuccess.ShouldBeTrue();
+        var response = result.Value;
+        response
+            .Results.Select(r => r.Status)
+            .ShouldBe([RowStatuses.Created, RowStatuses.Created, RowStatuses.Created, RowStatuses.Created]);
+        response
+            .Results.Select(r => r.DateTime)
+            .ShouldBe(["2026-05-15T11:58", "2026-05-15T11:59", "2026-05-15T12:00", "2026-05-16T00:30"]);
+        response.Results.Select(r => r.Bumped).ShouldBe([true, true, true, false]);
+
+        var today = await ReadDayAsync(client, new DateOnly(2026, 5, 15));
+        today
+            .Where(t => t.Description.StartsWith("Entry today", StringComparison.Ordinal))
+            .OrderBy(t => t.Date)
+            .Select(t => (t.Description, t.Date.TimeOfDay))
+            .ShouldBe([
+                ("Entry today on time", new TimeSpan(11, 58, 0)),
+                ("Entry today shifted", new TimeSpan(11, 59, 0)),
+                ("Entry today last", new TimeSpan(12, 0, 0)),
+            ]);
+        var tomorrow = await ReadDayAsync(client, new DateOnly(2026, 5, 16));
+        tomorrow.Single(t => t.Description == "Entry tomorrow").Date.TimeOfDay.ShouldBe(new TimeSpan(0, 30, 0));
+    }
+
+    [Fact]
+    public async Task Rows_dated_today_with_no_room_before_now_share_the_moment_of_the_previous_row()
+    {
+        var client = _firefly.CreateClient();
+        var request = new SubmitRequest(
+            [Expense("2026-05-15T12:30", "Entry shares one"), Expense("2026-05-15T12:45", "Entry shares two")],
+            ["2026-05-15T12:00"]
+        );
+
+        var result = await CreateService(client).SubmitAsync(request, Ct);
+
+        var response = result.Value;
+        response.Results.Select(r => r.Status).ShouldBe([RowStatuses.Created, RowStatuses.Created]);
+        response.Results.Select(r => r.DateTime).ShouldBe(["2026-05-15T12:00", "2026-05-15T12:00"]);
+        var today = await ReadDayAsync(client, new DateOnly(2026, 5, 15));
+        today
+            .Where(t => t.Description.StartsWith("Entry shares", StringComparison.Ordinal))
+            .Select(t => t.Date.TimeOfDay)
+            .ShouldBe([new TimeSpan(12, 0, 0), new TimeSpan(12, 0, 0)]);
     }
 
     [Fact]

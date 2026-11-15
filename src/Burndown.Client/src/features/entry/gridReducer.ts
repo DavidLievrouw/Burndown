@@ -64,7 +64,10 @@ function applyResult(row: GridRow, result: RowResult): GridRow {
         showErrors: false,
         notice:
           result.bumped && result.dateTime
-            ? { tone: "muted", text: `Time moved to ${formatWhen(when).slice(11)} to keep the entry order.` }
+            ? {
+                tone: "muted",
+                text: `Time moved to ${formatWhen(when).slice(11)} (not in the future, in entry order).`,
+              }
             : null,
       };
     }

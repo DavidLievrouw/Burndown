@@ -1,3 +1,4 @@
+using System.Globalization;
 using Burndown.Firefly;
 
 namespace Burndown.BrowserTests;
@@ -5,7 +6,10 @@ namespace Burndown.BrowserTests;
 /// <summary>Synthetic data: "now" is 15 February 2024 in Brussels, so January supplies the budget.</summary>
 internal static class SyntheticData
 {
-    public static readonly DateTimeOffset Now = DateTimeOffset.Parse("2024-02-15T10:00:00+01:00");
+    public static readonly DateTimeOffset Now = DateTimeOffset.Parse(
+        "2024-02-15T10:00:00+01:00",
+        CultureInfo.InvariantCulture
+    );
 
     public static IReadOnlyList<FireflyTransaction> Transactions { get; } =
     [
