@@ -52,13 +52,13 @@ public class FireflyClientTests
     public async Task About_returns_the_version()
     {
         var handler = new StubHandler(_ =>
-            StubHandler.Json(HttpStatusCode.OK, """{"data":{"version":"6.6.6","api_version":"2.1.0"}}""")
+            StubHandler.Json(HttpStatusCode.OK, """{"data":{"version":"6.7.8","api_version":"2.1.0"}}""")
         );
 
         var result = await CreateClient(handler).GetAboutAsync(Ct);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.Version.ShouldBe("6.6.6");
+        result.Value.Version.ShouldBe("6.7.8");
         handler.Requests.Single().PathAndQuery.ShouldBe("/api/v1/about");
     }
 

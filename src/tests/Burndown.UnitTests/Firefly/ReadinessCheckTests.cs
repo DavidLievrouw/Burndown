@@ -16,7 +16,7 @@ public class ReadinessCheckTests
     [Fact]
     public async Task Firefly_check_is_healthy_when_about_succeeds()
     {
-        var client = new FakeClient { About = Result<FireflyAbout>.Success(new FireflyAbout("6.6.6")) };
+        var client = new FakeClient { About = Result<FireflyAbout>.Success(new FireflyAbout("6.7.8")) };
 
         var result = await new FireflyReadinessCheck(client).CheckHealthAsync(new HealthCheckContext(), Ct);
 
@@ -86,7 +86,7 @@ public class ReadinessCheckTests
 
     private sealed class FakeClient : IFireflyClient
     {
-        public Result<FireflyAbout> About { get; init; } = Result<FireflyAbout>.Success(new FireflyAbout("6.6.6"));
+        public Result<FireflyAbout> About { get; init; } = Result<FireflyAbout>.Success(new FireflyAbout("6.7.8"));
 
         public IReadOnlyList<FireflyAccount> Cash { get; init; } =
         [new FireflyAccount(AccountId.From(16), "Cash account", AccountKind.Cash, true)];

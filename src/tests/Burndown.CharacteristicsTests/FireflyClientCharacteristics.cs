@@ -46,7 +46,7 @@ public class FireflyClientCharacteristics
         var result = await _firefly.CreateClient().GetAboutAsync(Ct);
 
         result.IsSuccess.ShouldBeTrue();
-        result.Value.Version.ShouldBe("6.6.6");
+        result.Value.Version.ShouldBe("6.7.8");
     }
 
     [Fact]

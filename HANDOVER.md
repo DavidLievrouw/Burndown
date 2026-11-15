@@ -65,7 +65,7 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 - How to run: fast subset `dotnet test --solution src/Burndown.sln --filter-not-trait "Category=Characteristics"`;
   container tests `dotnet test --project src/tests/Burndown.CharacteristicsTests/Burndown.CharacteristicsTests.csproj`
   (needs Docker, about 20 s: the container is ready about 13 s after start; one container is shared by all tests).
-- Throwaway Firefly recipe (`Infrastructure/FireflyFixture.cs`, `bootstrap.php`): image `fireflyiii/core:version-6.6.6`,
+- Throwaway Firefly recipe (`Infrastructure/FireflyFixture.cs`, `bootstrap.php`): image `fireflyiii/core:version-6.7.8` (bumped from 6.6.6; earlier sections record what was verified on 6.6.6),
   SQLite (`DB_CONNECTION=sqlite`), random 32-char `APP_KEY`, `TZ=Europe/Brussels`, `TRUSTED_PROXIES=**`, port 8080,
   wait for the log line `NGINX + PHP-FPM is running correctly`. `bootstrap.php` is copied into the container and run with
   `php`; it creates a user, the passport personal-access client and a token, and prints `TOKEN:<jwt>`. Seeds: Checking,

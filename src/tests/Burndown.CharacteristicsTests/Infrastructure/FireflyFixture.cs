@@ -17,7 +17,7 @@ namespace Burndown.CharacteristicsTests.Infrastructure;
 public sealed partial class FireflyFixture : IAsyncLifetime
 {
     /// <summary>The pinned image; update deliberately and re-run the characteristics tests.</summary>
-    public const string Image = "fireflyiii/core:version-6.6.6";
+    public const string Image = "fireflyiii/core:version-6.7.8";
 
     private const int ContainerPort = 8080;
 
