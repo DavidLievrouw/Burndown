@@ -4,9 +4,8 @@ Product spec, decisions and milestones. Conventions live in `AGENTS.md`; status 
 
 ## Goal
 
-Replace the existing Blazor Server app (`src/Burndown`) with a new application, built from scratch as **new projects in
-the same solution**, on the `rework` branch. The old app stays untouched and runnable until parity; its removal is the
-last milestone, on the owner's request.
+Replaced the former Blazor Server app (`src/Burndown`, removed in M8 and only in git history) with a new application,
+built from scratch as **new projects in the same solution**, on the `rework` branch.
 
 The new app is an efficiency layer on top of Firefly III for one user (David):
 
@@ -28,7 +27,7 @@ multi-user, login. Those stay in Firefly III.
 | D6 | English UI (including day and month names), `nl-BE` number/currency/date formats (`€ 1.234,56`, `dd/MM/yyyy`), Monday-first weeks, EUR only, zone `Europe/Brussels` from configuration | Owner decision. |
 | D7 | Entry timestamps: see "Entry specification – timestamps" | Required to keep Firefly's entry order. |
 | D8 | Minimum month 2023-12, maximum next month | Preserve current rules. |
-| D9 | New projects added alongside the old one; new app on port 9142 until the old one is removed | Owner request. |
+| D9 | The new projects were built alongside the old app (port 9142 meanwhile); since M8 the old app is gone and the new app uses port 9042 | Owner request. |
 | D10 | Tooling: CSharpier, central package management, Roslynator, `TreatWarningsAsErrors`, Vogen (strongly typed ids), xUnit v3 (Microsoft.Testing.Platform runner selected in `global.json`), Shouldly, NetArchTest, Testcontainers, Playwright, Vitest, Biome | Mirrors MovieDB/Motorsports (check their `Directory.Packages.props` for versions). |
 | D11 | Tests use a throwaway Firefly III container; the real Firefly (`localhost:8042`) is never written to | Real data. |
 | D12 | Selectable accounts are **Asset accounts only** (`autocomplete/accounts?types=Asset account`), for every account field | Owner decision (replaces "keep the old Asset + Revenue"): Firefly only accepts asset-type accounts in a withdrawal source, a deposit destination and transfer accounts (verify in M1). Firefly's 422 errors still map to the account field. Revenue accounts and liabilities are not offered. |
@@ -455,6 +454,20 @@ in the repository root would otherwise share the project and service name `burnd
 - Owner signs off parity. Remove `src/Burndown`, `publish.cmd`, `run.ps1`, root `dockerfile`/`docker-compose.yml`,
   committed `dist/`. Migrate `.sln` to `.slnx`, move the new app to port 9042, and tighten `Directory.*` to apply
   everywhere. The history still holds the old OAuth client secret: remind the owner to rotate it.
+- Owner additions: a new root `run.ps1` that builds and deploys to the local environment, prompting for the Firefly
+  URL (default accepted with ENTER) and token; drop the legacy `burndown` container/stack from the local Docker.
+
+**M8 as delivered:** removed `src/Burndown` (38 tracked files), `publish.cmd`, the root `dockerfile`,
+`docker-compose.yml` and old `run.ps1`, and the untracked `dist/`. `src/Burndown.sln` became `src/Burndown.slnx`
+(`dotnet sln migrate`, the `.DotSettings` files renamed). `Directory.Build.props`, `Directory.Packages.props` and
+`version.props` apply to every project (the name condition is gone); `.csharpierignore`, `.dockerignore` and
+`.gitignore` lost their legacy entries. Port moved 9142 → 9042 in `Program.cs`, `HealthCheckCommand.cs`, the
+Dockerfile, the compose file, `vite.config.ts`, `launchSettings.json` and the tests. New root `run.ps1` (PowerShell 7):
+prompts for the URL (default `http://host.docker.internal:8042`) and the token (secure prompt), passes them to compose
+through the process environment only, builds, recreates `burndown-web`, waits for the healthcheck and reports
+`/health/ready`. Legacy Docker: the `burndown` stack and container were already gone from Portainer; the leftover image
+`burndown:latest` and networks `burndown_default`/`burndown-web_default` were removed. No parity gap was found beyond
+the intentional differences already recorded (D12 asset accounts only, D21 no paste).
 
 ## Risks and open questions
 

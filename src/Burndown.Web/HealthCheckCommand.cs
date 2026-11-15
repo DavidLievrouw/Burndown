@@ -7,7 +7,7 @@ namespace Burndown.Web;
 internal static partial class HealthCheckCommand
 {
     public const string Switch = "--health-check";
-    public const int DefaultPort = 9142;
+    public const int DefaultPort = 9042;
     public const string LivePath = "/health/live";
 
     /// <summary>Determines the port the running instance listens on from <c>ASPNETCORE_URLS</c>.</summary>

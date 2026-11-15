@@ -21,10 +21,8 @@ derived from; do not edit it for project work.
     `wwwroot`. TanStack Query for server state, Tailwind CSS with Radix primitives for UI, Biome for lint and format.
   - Back-end tests: xUnit v3 (Microsoft.Testing.Platform), Shouldly, NetArchTest, Testcontainers (throwaway Firefly III),
     Playwright for .NET. Front-end tests: Vitest and Testing Library.
-  - Tooling: CSharpier for C#, Biome for TypeScript, central package management. The solution stays `src/Burndown.sln`
-    until the old app is removed, then becomes `.slnx`.
-- **Runtime/deployment:** one Docker container (Linux) on the owner's machine, reachable at `http://127.0.0.1:9142`
-  (port 9042 after the old app is removed, see Coexistence).
+  - Tooling: CSharpier for C#, Biome for TypeScript, central package management. The solution is `src/Burndown.slnx`.
+- **Runtime/deployment:** one Docker container (Linux) on the owner's machine, reachable at `http://127.0.0.1:9042`.
   Firefly III runs on the same machine (`http://host.docker.internal:8042` from the container). There is no
   authentication in the app: it is local-only.
 - **Current plan and handover:** `PLAN.md` and `HANDOVER.md` in the repository root (product spec, decisions and
@@ -41,15 +39,9 @@ derived from; do not edit it for project work.
   (no light mode, no theme switch). Do not copy those differences blindly in the other direction either.
 - **Precedence:** this file holds conventions, `PLAN.md` holds the product spec. If the two, or a document and the
   code/environment, disagree, stop and ask the owner before choosing, then record the answer in the plan.
-- **The rewrite:** the working application in `src/Burndown` (Blazor Server + Radzen) is being replaced from scratch on
-  the `rework` branch. The new application consists of **new, separate projects added to the same solution**
-  (`src/Burndown.Web`, `src/Burndown.Firefly`, and so on). Do not modify the old `Burndown` project, its files, or the
-  root `dockerfile`/`docker-compose.yml`/`publish.cmd`/`run.ps1`; it stays runnable as the behavioral reference until
-  the new app reaches parity. The new projects must not reference it. Removing the old project is its own final
-  milestone, done only on the owner's request. Do not copy its patterns (string-built JSON, hard-coded ids, unpaged
-  queries, OAuth).
-- **Coexistence:** while both apps exist, the new app uses port **9142** (the old one uses 9042). It takes over 9042
-  when the old one is removed.
+- **The rewrite:** the former Blazor Server + Radzen application (`src/Burndown`) was replaced from scratch and removed
+  in M8; it only exists in git history. Never copy its patterns (string-built JSON, hard-coded ids, unpaged queries,
+  OAuth) or its OAuth client secret from history.
 
 ### Architecture
 
@@ -66,9 +58,6 @@ Projects (under `src/`, tests under `src/tests/`) and dependency directions (ref
   validation and bulk submit.
 - **src/Burndown.Client:** the React SPA (not a .NET project). Built into the host's `wwwroot` during publish.
 - **Tests:** unit, characteristics (against a throwaway Firefly), architecture and browser tests, under `src/tests/`.
-
-The solution stays `src/Burndown.sln` while the old project exists (new projects are added to it). It is migrated to
-`.slnx` in the milestone that removes the old project.
 
 Rules: features depend on Common and Firefly, never on each other. Common depends on nothing. Firefly depends only on
 Common. The host composes everything through explicit module registration. Enforce boundaries with architecture tests.
@@ -227,11 +216,11 @@ Summary only; if this list and `PLAN.md` ever differ, stop and ask. Port from `D
 
 ## Web, UI and configuration
 
-- This is a local-only app. It is reachable only on the host's loopback (compose maps `127.0.0.1:9142:9142`; 9042 after
-  the old app is removed), uses plain HTTP, and has **no login**. Deliberate divergences from the template: no CSP, no
+- This is a local-only app. It is reachable only on the host's loopback (compose maps `127.0.0.1:9042:9042`), uses plain
+  HTTP, and has **no login**. Deliberate divergences from the template: no CSP, no
   HTTPS redirection, no HSTS, no antiforgery cookie flow. Do not add them.
-  - Run directly on the host (dev, tests, `dotnet run`): Kestrel binds to loopback only (`http://127.0.0.1:9142`).
-  - Inside the container Kestrel must listen on all container interfaces (`ASPNETCORE_URLS=http://+:9142`), otherwise
+  - Run directly on the host (dev, tests, `dotnet run`): Kestrel binds to loopback only (`http://127.0.0.1:9042`).
+  - Inside the container Kestrel must listen on all container interfaces (`ASPNETCORE_URLS=http://+:9042`), otherwise
     Docker's port publishing cannot reach it. This is not a violation: exposure is restricted by the compose port
     mapping, which publishes on `127.0.0.1` only. Never publish the port on other host interfaces and never use
     `network_mode: host`.
@@ -292,23 +281,21 @@ Run the smallest relevant checks, then expand when results warrant it:
 **Repository commands** (run from the repository root; confirmed in M0):
 
 - Restore tools: `dotnet tool restore`
-- Build: `dotnet build src/Burndown.sln -warnaserror` (the old project is not built under the new rules: the shared
-  `src/Directory.Build.props`/`Directory.Packages.props` settings apply only to projects whose name starts with
-  `Burndown.`, so `src/Burndown` is unaffected).
+- Build: `dotnet build src/Burndown.slnx -warnaserror`
 - XML-doc build: the same build with `-p:GenerateDocumentationFile=true -p:TreatWarningsAsErrors=false --no-incremental`
 - Format: `dotnet csharpier format <project folders>` ; check: `dotnet csharpier check <project folders>`, where the
   folders are the `Burndown.*` project folders and `src/tests` (do not use the glob `src/Burndown.*`: it also matches
-  `Burndown.sln`). Working command: `dotnet csharpier format src/Burndown.Common src/Burndown.Firefly
-  src/Burndown.Overview src/Burndown.Entry src/Burndown.Web src/tests` (and `check`). A `.csharpierignore` entry for `src/Burndown/` also protects
-  the old project. Never reformat `src/Burndown`.
-- Fast tests (no Docker): `dotnet test --solution src/Burndown.sln --filter-not-trait "Category=Characteristics"`.
+  `Burndown.slnx`). Working command: `dotnet csharpier format src/Burndown.Common src/Burndown.Firefly
+  src/Burndown.Overview src/Burndown.Entry src/Burndown.Web src/tests` (and `check`).
+- Fast tests (no Docker): `dotnet test --solution src/Burndown.slnx --filter-not-trait "Category=Characteristics"`.
   Characteristics tests (throwaway Firefly container, needs Docker, about 20 s):
   `dotnet test --project src/tests/Burndown.CharacteristicsTests/Burndown.CharacteristicsTests.csproj`.
-- Test: `dotnet test --solution src/Burndown.sln` (runs everything including the container tests; see
+- Test: `dotnet test --solution src/Burndown.slnx` (runs everything including the container tests; see
   `HANDOVER.md`). Do not pass `--nologo` to `dotnet test`: in Microsoft.Testing.Platform mode it is forwarded to the
   test app and the run silently reports "Zero tests ran" (exit code 5).
 - Front-end (in the client folder): `npm ci`, `npm run dev`, `npm run build`, `npm run lint`, `npm test`
-- Publish container: `docker compose` file under `docker-compose/` (see Deployment)
+- Publish container: `./run.ps1` (prompts for the Firefly URL and token), or `docker compose` directly under
+  `docker-compose/` (see Deployment)
 
 Platform gotchas:
 
@@ -326,7 +313,7 @@ Platform gotchas:
   empty; the host tests assert on `<html` only.
 - Do not enable `InvariantGlobalization`: the `nl-BE` culture and the IANA time zone need ICU and tzdata (both are in
   the `chiseled-extra` image).
-- The git root is `C:\David\Programmatuur\Burndown`; the solution file and old sources live under `src\`.
+- The git root is `C:\David\Programmatuur\Burndown`; the solution file lives under `src\`.
 
 ## Performance and reliability
 
@@ -342,21 +329,25 @@ Platform gotchas:
 
 ## Deployment and operations
 
+- **Deploy script:** the root `run.ps1` (PowerShell 7) builds the image and (re)deploys the compose stack locally. It
+  prompts for the Firefly URL (ENTER accepts `http://host.docker.internal:8042`) and the token (secure prompt), passes
+  them to compose through the process environment only, waits for the healthcheck and reports `/health/ready`. Never
+  store the token in a file from the script; never run it against the real Firefly in an automated run.
 - **Image:** multi-stage Dockerfile at `src/Burndown.Web/Dockerfile` (as in Motorsports; do **not** add a root
-  `Dockerfile`: it would collide with the old root `dockerfile` on case-insensitive Windows); build the client, publish
+  `Dockerfile`); build the client, publish
   the host, run on
   `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra` as non-root. No shell in the image: use the exec form
   healthcheck `["CMD", "dotnet", "Burndown.Web.dll", "--health-check"]`.
-- **Listening:** port 9142 in the container while the old app exists (9042 afterwards); compose publishes it on
-  `127.0.0.1` only. Use a different compose project/container name than the old app.
+- **Listening:** port 9042 in the container; compose publishes it on `127.0.0.1` only (project and container
+  `burndown-web`).
 - **Firefly:** `Firefly__BaseUrl=http://host.docker.internal:8042`; add `extra_hosts: host.docker.internal:host-gateway`
   where Docker does not provide it.
 - **Secrets:** `Firefly__Token` from a git-ignored `.env` file or the environment; user-secrets in development.
   Document how to create and rotate a Firefly personal access token (Profile → OAuth → Personal Access Tokens).
 - **No database:** there is nothing to back up or migrate. Settings are configuration files.
 - **Logging/limits:** structured console logs; set a container memory limit and measure it.
-- The old publish artifacts (`publish.cmd`, `run.ps1`, the root `dockerfile`/`docker-compose.yml`, committed `dist/`)
-  stay untouched until the final "remove the old app" milestone; never reproduce the old OAuth client secret.
+- The old publish artifacts (`publish.cmd`, the old `run.ps1`, the root `dockerfile`/`docker-compose.yml`, committed
+  `dist/`) were removed in M8; never reproduce the old OAuth client secret.
 
 ## Open decisions
 

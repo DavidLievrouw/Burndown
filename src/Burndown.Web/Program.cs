@@ -18,12 +18,12 @@ if (args is [HealthCheckCommand.Switch])
     );
 }
 
-const string loopbackUrl = "http://127.0.0.1:9142";
+const string loopbackUrl = "http://127.0.0.1:9042";
 string[] devClientOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Direct runs bind to loopback only. A configured URL (the container sets ASPNETCORE_URLS=http://+:9142) wins.
+// Direct runs bind to loopback only. A configured URL (the container sets ASPNETCORE_URLS=http://+:9042) wins.
 if (string.IsNullOrEmpty(builder.Configuration[WebHostDefaults.ServerUrlsKey]))
 {
     builder.WebHost.UseUrls(loopbackUrl);

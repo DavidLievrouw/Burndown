@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vitest/config";
 
-const backend = "http://127.0.0.1:9142";
+const backend = "http://127.0.0.1:9042";
 const outDir = resolve(import.meta.dirname, "../Burndown.Web/wwwroot");
 
 // emptyOutDir removes the tracked .gitkeep that keeps the folder in git.

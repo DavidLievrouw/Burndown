@@ -6,12 +6,13 @@ services:
     build:
       context: ../..
       dockerfile: src/Burndown.Web/Dockerfile
-    # Another project, service and container name than the legacy app's `burndown`, so that both can coexist.
+      args:
+        SOURCE_REVISION_ID: ${SOURCE_REVISION_ID:-}
     container_name: burndown-web
     restart: unless-stopped
     ports:
       # Loopback only: the app has no login. Never publish this port on another interface.
-      - "127.0.0.1:9142:9142"
+      - "127.0.0.1:9042:9042"
     environment:
       - Firefly__BaseUrl=${FIREFLY_BASE_URL:-http://host.docker.internal:8042}
       - Firefly__Token=${FIREFLY_TOKEN:?Set FIREFLY_TOKEN in docker-compose/burndown/.env or in your environment}

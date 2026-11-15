@@ -1,0 +1,28 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Assets/">
+    <File Path="../.gitignore" />
+    <File Path="../AGENTS.md" />
+    <File Path="../docker-compose/burndown/docker-compose.yml" />
+    <File Path="../HANDOVER.md" />
+    <File Path="../PLAN.md" />
+    <File Path="../README.md" />
+    <File Path="../run.ps1" />
+    <File Path="../version.txt" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Burndown.ArchitectureTests/Burndown.ArchitectureTests.csproj" />
+    <Project Path="tests/Burndown.BrowserTests/Burndown.BrowserTests.csproj" />
+    <Project Path="tests/Burndown.CharacteristicsTests/Burndown.CharacteristicsTests.csproj" />
+    <Project Path="tests/Burndown.UnitTests/Burndown.UnitTests.csproj" />
+  </Folder>
+  <Project Path="Burndown.Common/Burndown.Common.csproj" />
+  <Project Path="Burndown.Entry/Burndown.Entry.csproj" />
+  <Project Path="Burndown.Firefly/Burndown.Firefly.csproj" />
+  <Project Path="Burndown.Overview/Burndown.Overview.csproj" />
+  <Project Path="Burndown.Web/Burndown.Web.csproj" />
+</Solution>

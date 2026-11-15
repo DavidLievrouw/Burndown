@@ -7,15 +7,15 @@ namespace Burndown.UnitTests.Web;
 public class HealthCheckCommandTests
 {
     [Theory]
-    [InlineData(null, 9142)]
-    [InlineData("", 9142)]
-    [InlineData("http://+:9142", 9142)]
-    [InlineData("http://127.0.0.1:9042", 9042)]
+    [InlineData(null, 9042)]
+    [InlineData("", 9042)]
+    [InlineData("http://+:9042", 9042)]
+    [InlineData("http://127.0.0.1:9142", 9142)]
     [InlineData("http://localhost:5000/", 5000)]
     [InlineData("http://+:7000;https://+:7001", 7000)]
-    [InlineData("http://+", 9142)]
-    [InlineData("http://+:99999", 9142)]
-    [InlineData("http://+:0", 9142)]
+    [InlineData("http://+", 9042)]
+    [InlineData("http://+:99999", 9042)]
+    [InlineData("http://+:0", 9042)]
     public void ResolvePort_reads_the_first_port(string? urls, int expected)
     {
         HealthCheckCommand.ResolvePort(urls).ShouldBe(expected);
@@ -63,7 +63,7 @@ public class HealthCheckCommandTests
         var exitCode = await HealthCheckCommand.RunAsync(client, null, error, TestContext.Current.CancellationToken);
 
         exitCode.ShouldBe(1);
-        error.ToString().ShouldContain("9142");
+        error.ToString().ShouldContain("9042");
     }
 
     private sealed class StubHandler : HttpMessageHandler

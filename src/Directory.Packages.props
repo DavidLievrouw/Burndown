@@ -1,10 +1,9 @@
 <Project>
-  <!-- Central package management applies only to the new Burndown.* projects; the old src/Burndown project pins versions itself. -->
-  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
+  <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
-  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
+  <ItemGroup>
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />

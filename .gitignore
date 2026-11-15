@@ -328,10 +328,6 @@ build/*/content/*
 # Test reports
 *.trx
 
-# Custom
-dist
-dev-dist
-
 # Burndown rewrite
 .env
 src/Burndown.Client/coverage/

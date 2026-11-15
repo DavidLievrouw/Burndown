@@ -1,8 +1,7 @@
 <Project>
   <Import Project="version.props" />
 
-  <!-- Applies only to the new Burndown.* projects; the old src/Burndown project keeps its own settings until it is removed (M8). -->
-  <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
+  <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
@@ -14,14 +13,14 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
+  <ItemGroup>
     <InternalsVisibleTo Include="Burndown.UnitTests" />
     <InternalsVisibleTo Include="Burndown.ArchitectureTests" />
     <InternalsVisibleTo Include="Burndown.CharacteristicsTests" />
     <InternalsVisibleTo Include="Burndown.BrowserTests" />
   </ItemGroup>
 
-  <ItemGroup Condition="$(MSBuildProjectName.StartsWith('Burndown.'))">
+  <ItemGroup>
     <PackageReference Include="Roslynator.Analyzers" PrivateAssets="all" />
     <PackageReference Include="Roslynator.CodeAnalysis.Analyzers" PrivateAssets="all" />
     <PackageReference Include="Roslynator.Formatting.Analyzers" PrivateAssets="all" />

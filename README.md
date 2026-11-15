@@ -9,10 +9,22 @@ The back-end is a .NET 10 backend-for-frontend (`src/Burndown.Web`); the front-e
 app (`src/Burndown.Client`) that is served from the host's `wwwroot`. There is no database and no login: Firefly III is
 the single source of truth and the app is reachable on the local machine only.
 
-`PLAN.md` holds the product specification and decisions, `HANDOVER.md` the status. `src/Burndown` is the legacy
-application (port 9042); it is untouched and runs side by side with this one (port **9142**).
+`PLAN.md` holds the product specification and decisions, `HANDOVER.md` the status.
 
 ## Run with Docker
+
+The quickest way is the deploy script (PowerShell 7, from the repository root):
+
+```powershell
+./run.ps1
+```
+
+It asks for the Firefly III URL (press ENTER to accept `http://host.docker.internal:8042`) and for a personal access
+token (see below), builds the image, (re)starts the container `burndown-web` and waits until it is healthy. The token
+is only handed to Docker through the environment of that run; it is not written to a file. Pass `-FireflyUrl` and
+`-FireflyToken` (a secure string) to skip the prompts, or `-NoCache` for a clean image build.
+
+Without the script:
 
 1. Create a Firefly III personal access token (see below).
 2. Copy `docker-compose/burndown/.env.example` to `docker-compose/burndown/.env` and set `FIREFLY_TOKEN`. The `.env`
@@ -23,7 +35,7 @@ application (port 9042); it is untouched and runs side by side with this one (po
    docker compose -f docker-compose/burndown/docker-compose.yml up -d --build
    ```
 
-4. Open <http://127.0.0.1:9142> (or `http://localhost:9142`). Other host names are rejected (`AllowedHosts`).
+Then open <http://127.0.0.1:9042> (or `http://localhost:9042`). Other host names are rejected (`AllowedHosts`).
 
 The container publishes the port on `127.0.0.1` only, runs as a non-root user on a read-only file system with a 256 MB
 memory limit, and reports its health through `dotnet Burndown.Web.dll --health-check` (which calls `/health/live`).
@@ -46,9 +58,9 @@ The image tag is the version in `version.txt` (override with `BURNDOWN_VERSION`)
 ### Create or rotate the Firefly III token
 
 1. In Firefly III open **Profile → OAuth → Personal Access Tokens** and choose **Create new token**.
-2. Copy the token into `docker-compose/burndown/.env` as `FIREFLY_TOKEN`.
-3. Recreate the container: `docker compose -f docker-compose/burndown/docker-compose.yml up -d`.
-4. Delete the old token in the same Firefly III screen.
+2. Run `./run.ps1` again and enter the new token (or copy it into `docker-compose/burndown/.env` as `FIREFLY_TOKEN` and
+   run `docker compose -f docker-compose/burndown/docker-compose.yml up -d`).
+3. Delete the old token in the same Firefly III screen.
 
 Tokens expire after about a year. An expired or invalid token shows as a clear "token invalid or expired" error in the
 app and as `Unhealthy` on `/health/ready`. Never commit a token.
@@ -63,7 +75,7 @@ dotnet user-secrets set "Firefly:Token" "<token>" --project src/Burndown.Web
 cd src/Burndown.Client; npm ci
 ```
 
-- Host (binds to `http://127.0.0.1:9142`): `dotnet run --project src/Burndown.Web`
+- Host (binds to `http://127.0.0.1:9042`): `dotnet run --project src/Burndown.Web`
 - Client dev server with proxy (`http://localhost:5173`): `npm run dev` in `src/Burndown.Client`
 - Client build into the host's `wwwroot`: `npm run build`
 
@@ -73,9 +85,9 @@ cd src/Burndown.Client; npm ci
 ### Checks
 
 ```powershell
-dotnet build src/Burndown.sln -warnaserror
+dotnet build src/Burndown.slnx -warnaserror
 dotnet csharpier check src/Burndown.Common src/Burndown.Firefly src/Burndown.Overview src/Burndown.Entry src/Burndown.Web src/tests
-dotnet test --solution src/Burndown.sln --filter-not-trait "Category=Characteristics" --filter-not-trait "Category=Browser"
+dotnet test --solution src/Burndown.slnx --filter-not-trait "Category=Characteristics" --filter-not-trait "Category=Browser"
 cd src/Burndown.Client; npm run lint; npx tsc --noEmit; npm test
 ```
 

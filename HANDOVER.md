@@ -14,8 +14,8 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
 | M4 Entry back-end | Delivered, awaiting owner review |
 | M5 Entry grid UI | Delivered, awaiting owner review |
 | M6 Browser tests and hardening | Delivered, awaiting owner review |
-| M7 Packaging | Delivered, awaiting owner review |
-| M8 Parity review and removal of old app | Not started |
+| M7 Packaging | Delivered, approved |
+| M8 Parity review, removal of old app, `run.ps1` | Delivered, awaiting owner review |
 
 ## Delivered so far
 
@@ -244,22 +244,52 @@ Read this first. Update it at the end of every milestone. No secrets, tokens or 
   PowerShell call as `docker compose` (env vars do not persist between tool calls).
 - Not done (by design): no automated image build in tests; the browser tests still run the host directly.
 
-## Next: M8 – Parity review and removal of the old app
+### M8 – Parity review, removal of the old app, `run.ps1` (delivered)
 
-Only on the owner's request, after the owner signs off parity and reviews M7 (see PLAN M8). Remind the owner to rotate
-the old OAuth client secret (still in git history) and Firefly's `STATIC_CRON_TOKEN` (printed once into tool output
-during an earlier session).
+Note: earlier milestone sections above keep their historical wording (`Burndown.sln`, port 9142, "old app"); since M8
+the solution is `src/Burndown.slnx`, the port is 9042 and the old app is gone.
+
+- Removed: `src/Burndown/` (38 tracked files), `publish.cmd`, root `dockerfile`, root `docker-compose.yml`, old
+  `run.ps1`, untracked `dist/`. `.sln` → `.slnx` (`src/Burndown.slnx`; the Assets folder lists `run.ps1`, compose,
+  docs, `version.txt`). `src/Directory.Build.props`, `Directory.Packages.props` and `version.props` are now
+  unconditional. `.csharpierignore`, `.dockerignore`, `.gitignore` cleaned of legacy entries.
+- Port 9142 → 9042: `Program.cs`, `HealthCheckCommand.cs`, `vite.config.ts`, `launchSettings.json`, Dockerfile, compose,
+  `HealthCheckCommandTests` (9142 stays as the intentional "other port" case). Compose gained the `SOURCE_REVISION_ID`
+  build arg.
+- New root `run.ps1` (PowerShell 7): `-FireflyUrl`, `-FireflyToken` (SecureString), `-NoCache`; prompts for the URL
+  (ENTER accepts `http://host.docker.internal:8042`) and the token, validates both, sets `FIREFLY_BASE_URL`,
+  `FIREFLY_TOKEN`, `SOURCE_REVISION_ID` as process env vars only (removed in `finally`), runs `docker compose build` and
+  `up --detach --force-recreate --remove-orphans`, waits for the container to be healthy and reports `/health/ready`.
+  Nothing is written to disk. Use it with the real token yourself; the agent never ran it against the real Firefly.
+- Legacy Docker: Portainer (`localhost:9000`) held only the `evcc` stack; the `burndown` stack and container no longer
+  existed. Removed the leftover image `burndown:latest` and the networks `burndown_default` / `burndown-web_default`.
+  Nothing else was touched. The Portainer password was used in memory only and is not recorded.
+- Verification: `run.ps1` run in-process against a **throwaway Firefly 6.6.6** (port 18142): image built, container
+  healthy on `127.0.0.1:9042`, `/health/live` and `/` 200, `/health/ready` 503 only because the default ids 16/13/14
+  do not exist there (script warned as designed); env showed the trimmed base URL. Cleaned up afterwards. The
+  ENTER-default prompt was verified by reading (secure `Read-Host` cannot be driven from piped stdin).
+  Build `-warnaserror` 0 warnings; CSharpier check clean; fast tests 312/312; browser tests 24/24; client `lint` clean,
+  `vitest` 189/189.
+- Learnings: `-FireflyToken` is a SecureString, so call `run.ps1` in-process (`& .\run.ps1 ...`), not via `pwsh -File`
+  with an argument. The `Zero tests ran` / exit 8 from a solution-wide run comes from the Browser project when excluded
+  by filter; run Browser tests with `--project`.
+
+## Next
+
+Nothing pending: the plan is complete after owner review of M8. Reminders for the owner: rotate the old Firefly OAuth
+client secret (still in git history), Firefly's `STATIC_CRON_TOKEN` (printed once into tool output in an earlier
+session) and the Portainer password (shared in chat). The default ids (cash 16, budgets 13/14) are for the live
+Firefly; `/health/ready` is 503 against any other instance.
 
 ## Environment facts
 
-- Branch: `rework`. Git root `C:\David\Programmatuur\Burndown`. Solution: `src\Burndown.sln` (old project `Burndown` plus,
-  later, the new `Burndown.*` projects).
+- Branch: `rework`. Git root `C:\David\Programmatuur\Burndown`. Solution: `src\Burndown.slnx` (the old project was removed in M8).
 - Toolchain: .NET SDKs 8, 9 and 10.0.200, Docker 29.6 (Rancher Desktop), Node 24.19.
 - Real Firefly III: `http://localhost:8042` (real data: read-only unless the owner asks, never written to by an agent).
-- Old app: port 9042. New app: port 9142 until the old one is removed.
+- App: port 9042 (127.0.0.1). Deploy with `.\run.ps1`.
 - Reference repos: `C:\_git\MovieDB`, `C:\_git\Motorsports` (never read their `prompt-history*` files).
-- Uncommitted owner changes: `src/Burndown/appsettings.Development.json` (contains the old OAuth secret: never touch,
-  stage or copy it). `src/Burndown.sln` now includes the new projects (uncommitted).
+- The owner's uncommitted `src/Burndown/appsettings.Development.json` (old OAuth secret) was deleted together with the
+  old project in M8 (the secret remains in git history of the old compose file). Never copy it.
 
 ## Learnings
 

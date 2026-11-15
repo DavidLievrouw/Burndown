@@ -32,12 +32,12 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra
 WORKDIR /app
 COPY --from=build /out .
 # Listen on all container interfaces: exposure is restricted by the compose port mapping (127.0.0.1 only).
-ENV ASPNETCORE_URLS=http://+:9142 \
+ENV ASPNETCORE_URLS=http://+:9042 \
     ASPNETCORE_HTTP_PORTS= \
     DOTNET_gcServer=0 \
     DOTNET_GCHeapHardLimitPercent=50 \
     DOTNET_TieredPGO=1
 USER $APP_UID
-EXPOSE 9142
+EXPOSE 9042
 HEALTHCHECK --interval=30s --timeout=15s --start-period=30s CMD ["dotnet", "Burndown.Web.dll", "--health-check"]
 ENTRYPOINT ["dotnet", "Burndown.Web.dll"]
